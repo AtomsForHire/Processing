@@ -522,11 +522,11 @@ if __name__ == '__main__':
     plt.clf()
 
     # Attemp Ridhima's QA pipeline
-    # print("Calibration variance")
-    # calVar(obsids, varDir, solDir)
-    #
-    # print("Calibration RMS")
-    # calRMS(obsids, rmsDir, solDir)
+    print("Calibration variance")
+    calVar(obsids, varDir, solDir)
+
+    print("Calibration RMS")
+    calRMS(obsids, rmsDir, solDir)
 
     print("AMP SMOOTHNESS")
     calAmpSmoothness(obsids, solDir, smoothDir, pointingCentres)
