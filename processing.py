@@ -23,11 +23,15 @@ def getDirs():
         sys.exit('data.in file does not exist')
 
     with open(file) as f:
-        statsDir = f.read()
-        rmsDir = f.read()
-        varDir = f.read()
-        smoothDir = f.read()
-        solDir = f.read()
+        temp = f.read.splitlines()
+
+    statsDir = temp[0]
+    rmsDir = temp[1]
+    varDir = temp[2]
+    smoothDir = temp[3]
+    solDir = temp[4]
+
+    return statsDir, rmsDir, varDir, smoothDir, solDir
 
 
 def getRMS(filename):
@@ -283,28 +287,28 @@ def calAmpSmoothness(obsids, solDir, smoothDir, labels):
                 # print(np.all(yimag == 0), sum(yimag))
                 # print(np.any(yimag == np.nan))
                 # print(yf)
-                smooth = np.average(abs(yf[1:])/abs(yf[0]))
+                smooth = np.average(abs(yf[1:int(3072/2)])/abs(yf[0]))
 
-                if (interp_type == 'linear' and j == 126):
-                    # smooth = np.average(abs(yf[100:-100])/abs(yf[0]))
-                    fig, (ax1, ax2, ax3) = plt.subplots(3)
-                    # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
-                    ax1.plot(old.real, 'r.', alpha=0.5,
-                             markersize=0.75, label='old')
-                    ax1.plot(yreal, linewidth=0.5, label='interp')
-                    ax1.set_title(obs + " amps solutions real")
-                    ax2.plot(old.imag, 'r.', alpha=0.5,
-                             markersize=0.75, label='old')
-                    ax2.plot(yimag, linewidth=0.5, label='interp')
-                    ax2.set_title(obs + " amps solutions imag")
-                    # ax1.set_ylim(0, 7)
-                    ax1.legend()
-                    ax3.plot(abs(yf))
-                    ax3.set_title(
-                        f'Absolute value of fourier transform {smooth}')
-                    # ax4.plot(yf.imag)
-                    # ax4.set_title('Fourier transform real')
-                    plt.show()
+                # if (interp_type == 'linear' and j == 126):
+                #     # smooth = np.average(abs(yf[100:-100])/abs(yf[0]))
+                #     fig, (ax1, ax2, ax3) = plt.subplots(3)
+                #     # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
+                #     ax1.plot(old.real, 'r.', alpha=0.5,
+                #              markersize=0.75, label='old')
+                #     ax1.plot(yreal, linewidth=0.5, label='interp')
+                #     ax1.set_title(obs + " amps solutions real")
+                #     ax2.plot(old.imag, 'r.', alpha=0.5,
+                #              markersize=0.75, label='old')
+                #     ax2.plot(yimag, linewidth=0.5, label='interp')
+                #     ax2.set_title(obs + " amps solutions imag")
+                #     # ax1.set_ylim(0, 7)
+                #     ax1.legend()
+                #     ax3.plot(abs(yf))
+                #     ax3.set_title(
+                #         f'Absolute value of fourier transform {smooth}')
+                #     # ax4.plot(yf.imag)
+                #     # ax4.set_title('Fourier transform real')
+                #     plt.show()
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
@@ -314,7 +318,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, labels):
                 yimag1 = interpChoices(x, yimag1, interp_type)
                 y1 = yreal1 + 1.0j * yimag1
                 yf1 = np.fft.fft(y1)
-                smooth1 = np.average(abs(yf1[1:])/abs(yf1[0]))
+                smooth1 = np.average(abs(yf1[1:int(3072/2)])/abs(yf1[0]))
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAll.append(xxSmoothness)
@@ -414,20 +418,7 @@ if __name__ == '__main__':
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
 
-    statsDir = './'
-    rmsDir = './rms_cal/both/'
-    varDir = './var_cal/both/'
-    smoothDir = "./smoothness/"
-    solDir = "../rerun_2_solutions/"
-
-    # if Path(rmsDir).exists():
-    #     shutil.rmtree(rmsDir)
-    #
-    # if Path(varDir).exists():
-    #     shutil.rmtree(varDir)
-    #
-    # if Path(smoothDir).exists():
-    #     shutil.rmtree(smoothDir)
+    statsDir, rmsDir, varDir, smoothDir, solDir = getDirs()
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
