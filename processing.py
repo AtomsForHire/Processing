@@ -11,6 +11,7 @@ from tqdm import tqdm
 from pathlib import Path
 import json
 import sys
+import matplotlib.colors
 
 
 def getDirs():
@@ -252,7 +253,7 @@ def interpChoices(x, y, interp_type):
     return y
 
 
-def calAmpSmoothness(obsids, solDir, smoothDir, labels):
+def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
     x = np.linspace(0, 3073, 3072)
     ant = np.linspace(0, 127, 128)
     # interps = ['zero', 'linear', 'cspline']
@@ -387,15 +388,22 @@ def calAmpSmoothness(obsids, solDir, smoothDir, labels):
         plt.clf()
 
     # Save figure for all obsids XX
-    linestyles = ['solid', 'dashed', 'dotted']
-    j = 0
-    for i in range(0, len(obsids)):
-        obs = obsids[i]
-        if (np.mod(i, 9) == 0):
-            style = linestyles[j]
-            j += 1
+    if (distribution == 'cyclic'):
+        linestyles = ['solid', 'dashed', 'dotted', 'dashdot']
+        j = 0
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            if (np.mod(i, 9) == 0):
+                style = linestyles[j]
+                j += 1
 
-        plt.plot(ant, allObsXXSmoothness[i], label=obs, linestyle=style)
+            plt.plot(ant, allObsXXSmoothness[i], label=obs, linestyle=style)
+    elif (distribution == 'sorted'):
+        c1 = categorical_cmap(15, 2, cmap="tab20")
+        plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            plt.plot(ant, allObsXXSmoothness[i], alpha=0.7, label=obs)
 
     ax = plt.gca()
     lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
@@ -409,14 +417,21 @@ def calAmpSmoothness(obsids, solDir, smoothDir, labels):
     plt.clf()
 
     # Save figure for all obsids YY
-    j = 0
-    for i in range(0, len(obsids)):
-        obs = obsids[i]
-        if (np.mod(i, 9) == 0):
-            style = linestyles[j]
-            j += 1
+    if (distribution == 'cyclic'):
+        j = 0
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            if (np.mod(i, 9) == 0):
+                style = linestyles[j]
+                j += 1
 
-        plt.plot(ant, allObsYYSmoothness[i], label=obs, linestyle=style)
+            plt.plot(ant, allObsYYSmoothness[i], label=obs, linestyle=style)
+    elif (distribution == 'sorted'):
+        c1 = categorical_cmap(15, 2, cmap="tab20")
+        plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            plt.plot(ant, allObsYYSmoothness[i], alpha=0.7, label=obs)
 
     ax = plt.gca()
     lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
@@ -428,6 +443,27 @@ def calAmpSmoothness(obsids, solDir, smoothDir, labels):
     plt.savefig(smoothDir + 'all_obs_yy_linear.pdf',
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.clf()
+
+
+# Straight up took this from https://stackoverflow.com/questions/47222585/matplotlib-generic-colormap-from-tab10,
+# Thank you.
+def categorical_cmap(nc, nsc, cmap="tab10", continuous=False):
+    if nc > plt.get_cmap(cmap).N:
+        raise ValueError("Too many categories for colormap.")
+    if continuous:
+        ccolors = plt.get_cmap(cmap)(np.linspace(0, 1, nc))
+    else:
+        ccolors = plt.get_cmap(cmap)(np.arange(nc, dtype=int))
+    cols = np.zeros((nc*nsc, 3))
+    for i, c in enumerate(ccolors):
+        chsv = matplotlib.colors.rgb_to_hsv(c[:3])
+        arhsv = np.tile(chsv, nsc).reshape(nsc, 3)
+        arhsv[:, 1] = np.linspace(chsv[1], 0.25, nsc)
+        arhsv[:, 2] = np.linspace(chsv[2], 1, nsc)
+        rgb = matplotlib.colors.hsv_to_rgb(arhsv)
+        cols[i*nsc:(i+1)*nsc, :] = rgb
+    cmap = matplotlib.colors.ListedColormap(cols)
+    return cmap
 
 
 if __name__ == '__main__':
@@ -522,11 +558,11 @@ if __name__ == '__main__':
     plt.clf()
 
     # Attemp Ridhima's QA pipeline
-    print("Calibration variance")
-    calVar(obsids, varDir, solDir)
-
-    print("Calibration RMS")
-    calRMS(obsids, rmsDir, solDir)
+    # print("Calibration variance")
+    # calVar(obsids, varDir, solDir)
+    #
+    # print("Calibration RMS")
+    # calRMS(obsids, rmsDir, solDir)
 
     print("AMP SMOOTHNESS")
-    calAmpSmoothness(obsids, solDir, smoothDir, pointingCentres)
+    calAmpSmoothness(obsids, solDir, smoothDir, distribution)
