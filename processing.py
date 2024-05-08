@@ -23,15 +23,36 @@ def getDirs():
         sys.exit('data.in file does not exist')
 
     with open(file) as f:
-        temp = f.read.splitlines()
+        temp = f.read().splitlines()
 
     statsDir = temp[0]
     rmsDir = temp[1]
     varDir = temp[2]
     smoothDir = temp[3]
     solDir = temp[4]
+    distribution = temp[5].split(' ')[0]
 
-    return statsDir, rmsDir, varDir, smoothDir, solDir
+    if (distribution == "cyclic"):
+        if (len(temp[5].split()) != 2):
+            sys.exit('Please enter a period (T) for your observations')
+        period = temp[5].split()[1]
+        if (len(temp) != 6 + int(period)):
+            sys.exit(
+                f'You have put down the observations as cyclicly distributed with a period of {period}, but have not included that many pointing center labels')
+        pointingCentres = list()
+
+        for i in range(1, int(period) + 1):
+            pointingCentres.append(temp[5 + i])
+
+    # Else I assume the observations should be in increasing order, and thus
+    # pointing centers do not matter
+    elif (distribution == 'sorted'):
+        pointingCentres = []
+    else:
+        sys.exit(
+            'Please input either \'sorted\' or \'cyclic\' distribution of observations')
+
+    return statsDir, rmsDir, varDir, smoothDir, solDir, distribution, pointingCentres
 
 
 def getRMS(filename):
@@ -64,75 +85,75 @@ def getMin(filename):
     return float(m.group(1))
 
 
-def getObsVec(directory):
+def getObsVec(directory, distribution):
     point1 = list()
     point2 = list()
     point3 = list()
 
-    order = list()
+    temp = list()
 
     # Grab all obsid and sort
     for file in os.listdir(directory):
         if os.path.isfile(directory + file) and file.endswith(".tsv"):
             obsid = file.split('_')[0]
-            order.append(obsid)
+            temp.append(obsid)
 
-    order = sorted(order)
+    temp = sorted(temp)
+    result = temp
 
-    # Sort all obsid into groups with different pointing centres
-    for i in range(0, len(order) - 2, 3):
-        # print(i)
-        point1.append(order[i])
-        point2.append(order[i + 1])
-        point3.append(order[i + 2])
+    if (distribution == 'cyclic'):
+        # Sort all obsid into groups with different pointing centres
+        for i in range(0, len(temp) - 2, 3):
+            # print(i)
+            point1.append(temp[i])
+            point2.append(temp[i + 1])
+            point3.append(temp[i + 2])
 
-    return (point1, point2, point3)
+        result = point1 + point2 + point3
+
+    return result
 
 
-def getRMSVec(directory, point1, point2, point3):
-    rms1 = np.zeros(len(point1))
-    rms2 = np.zeros(len(point2))
-    rms3 = np.zeros(len(point3))
+def getRMSVec(directory, obsids):
+    rmsVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
             obsid = file.split('_')[0]
             rms = getRMS(file)
 
-            if (point1.count(obsid) == 1):
-                rms1[point1.index(obsid)] = rms
-            elif (point2.count(obsid) == 1):
-                rms2[point2.index(obsid)] = rms
-            else:
-                rms3[point3.index(obsid)] = rms
+            rmsVec[obsids.index(obsid)] = rms
+            # if (point1.count(obsid) == 1):
+            #     rms1[point1.index(obsid)] = rms
+            # elif (point2.count(obsid) == 1):
+            #     rms2[point2.index(obsid)] = rms
+            # else:
+            #     rms3[point3.index(obsid)] = rms
 
-    return (rms1, rms2, rms3)
+    return rmsVec
 
 
-def getMaxVec(directory, point1, point2, point3):
-    max1 = np.zeros(len(point1))
-    max2 = np.zeros(len(point2))
-    max3 = np.zeros(len(point3))
+def getMaxVec(directory, obsids):
+    maxVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
             obsid = file.split('_')[0]
             max = getMax(file)
 
-            if (point1.count(obsid) == 1):
-                max1[point1.index(obsid)] = max
-            elif (point2.count(obsid) == 1):
-                max2[point2.index(obsid)] = max
-            else:
-                max3[point3.index(obsid)] = max
+            maxVec[obsids.index(obsid)] = max
+            # if (point1.count(obsid) == 1):
+            #     max1[point1.index(obsid)] = max
+            # elif (point2.count(obsid) == 1):
+            #     max2[point2.index(obsid)] = max
+            # else:
+            #     max3[point3.index(obsid)] = max
 
-    return (max1, max2, max3)
+    return maxVec
 
 
-def getDRVec(directory, point1, point2, point3):
-    dr1 = np.zeros(len(point1))
-    dr2 = np.zeros(len(point2))
-    dr3 = np.zeros(len(point3))
+def getDRVec(directory, obsids):
+    drVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
@@ -141,14 +162,9 @@ def getDRVec(directory, point1, point2, point3):
             rms = getRMS(file)
             dr = max/rms
 
-            if (point1.count(obsid) == 1):
-                dr1[point1.index(obsid)] = dr
-            elif (point2.count(obsid) == 1):
-                dr2[point2.index(obsid)] = dr
-            else:
-                dr3[point3.index(obsid)] = dr
+            drVec[obsids.index(obsid)] = dr
 
-    return (dr1, dr2, dr3)
+    return drVec
 
 
 def calVar(obsids, varDir, solDir):
@@ -256,7 +272,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, labels):
             # Loop over antennas
             for j in range(0, len(cal.gain_array[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
-                old = cal.gain_array[0, j, :, 0].copy()
+                # old = cal.gain_array[0, j, :, 0].copy()
                 yreal = cal.gain_array[0, j, :, 0].real.copy()
                 yimag = cal.gain_array[0, j, :, 0].imag.copy()
 
@@ -418,73 +434,94 @@ if __name__ == '__main__':
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
 
-    statsDir, rmsDir, varDir, smoothDir, solDir = getDirs()
+    statsDir, rmsDir, varDir, smoothDir, solDir, distribution, pointingCentres = getDirs()
+    print(distribution)
+    print(pointingCentres)
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
     Path(smoothDir).mkdir(parents=True, exist_ok=True)
 
     # Group obsid
-    point1, point2, point3 = getObsVec(statsDir)
+    obsids = getObsVec(statsDir, distribution)
 
-    print("First pointing group : ", point1)
-    print("Second pointing group: ", point2)
-    print("Third pointing group : ", point3)
+    if (distribution == 'cyclic'):
+        print('CYCLING DISTRIBUTION SELECTED')
+        period = len(pointingCentres)
+        idx = int(len(obsids)/period)
+        print('FIRST POINTING CENTER : ', pointingCentres[0])
+        print(obsids[0:idx])
+        print('SECOND POINTING CENTER: ', pointingCentres[1])
+        print(obsids[idx: 2*idx])
+        print('THIRD POINTING CENTER : ', pointingCentres[2])
+        print(obsids[2*idx:])
 
     # Get RMS for obs
-    rms1, rms2, rms3 = getRMSVec(statsDir, point1, point2, point3)
+    rms = getRMSVec(statsDir, obsids)
 
-    print("RMS1: ", rms1)
-    print("RMS2: ", rms2)
-    print("RMS3: ", rms3)
+    if (distribution == 'cyclic'):
+        idx = int(len(obsids)/period)
+        for i in range(0, period - 1):
+            plt.plot(obsids[i*idx:(i+1)*idx], rms[i*idx:(i+1)*idx],
+                     label=pointingCentres[i])
 
-    point1Label = 'ra=73.8, dec=-13.0'
-    point2Label = 'ra=71.3, dec=-13.0'
-    point3Label = 'ra=68.8, dec=-13.0'
-    labels = [point1Label, point2Label, point3Label]
-    plt.plot(point1, rms1, label=point1Label)
-    plt.plot(point2, rms2, label=point2Label)
-    plt.plot(point3, rms3, label=point3Label)
+        # Print the last pointing centre
+        i += 1
+        plt.plot(obsids[i*idx:], rms[i*idx:], label=pointingCentres[i])
+
+        plt.legend()
+    elif (distribution == 'sorted'):
+        plt.plot(obsids, rms)
+
     plt.xticks(rotation=90)
     plt.ylabel("RMS (Jy/beam)")
-    plt.legend()
     plt.savefig("obs_rms.pdf", bbox_inches='tight')
     plt.clf()
 
     # Get max for obs
-    max1, max2, max3 = getMaxVec(statsDir, point1, point2, point3)
+    max = getMaxVec(statsDir, obsids)
 
-    print("max1: ", max1)
-    print("max2: ", max2)
-    print("max3: ", max3)
+    if (distribution == 'cyclic'):
+        idx = int(len(obsids)/period)
+        for i in range(0, period - 1):
+            plt.plot(obsids[i*idx:(i+1)*idx], max[i*idx:(i+1)*idx],
+                     label=pointingCentres[i])
 
-    plt.plot(point1, max1, label=point1Label)
-    plt.plot(point2, max2, label=point2Label)
-    plt.plot(point3, max3, label=point3Label)
+        # Print the last pointing centre
+        i += 1
+        plt.plot(obsids[i*idx:], max[i*idx:], label=pointingCentres[i])
+
+        plt.legend()
+    elif (distribution == 'sorted'):
+        plt.plot(obsids, max)
     plt.xticks(rotation=90)
     plt.ylabel("Maximum")
-    plt.legend()
     plt.savefig("obs_max.pdf", bbox_inches='tight')
     plt.clf()
 
     # Get DR for obs
-    dr1, dr2, dr3 = getDRVec(statsDir, point1, point2, point3)
+    dr = getDRVec(statsDir, obsids)
 
-    print("DR1: ", dr1)
-    print("DR2: ", dr2)
-    print("DR3: ", dr3)
+    if (distribution == 'cyclic'):
+        idx = int(len(obsids)/period)
+        for i in range(0, period - 1):
+            plt.plot(obsids[i*idx:(i+1)*idx], dr[i*idx:(i+1)*idx],
+                     label=pointingCentres[i])
 
-    plt.plot(point1, dr1, label=point1Label)
-    plt.plot(point2, dr2, label=point2Label)
-    plt.plot(point3, dr3, label=point3Label)
+        # Print the last pointing centre
+        i += 1
+        plt.plot(obsids[i*idx:], dr[i*idx:], label=pointingCentres[i])
+
+        plt.legend()
+    elif (distribution == 'sorted'):
+        plt.plot(obsids, dr)
+
     plt.xticks(rotation=90)
     plt.ylabel("Dynamic Range (max/rms)")
-    plt.legend()
     plt.savefig("obs_dynamic_range.pdf", bbox_inches='tight')
     plt.clf()
 
     # Attemp Ridhima's QA pipeline
-    obsids = point1 + point2 + point3
     # print("Calibration variance")
     # calVar(obsids, varDir, solDir)
     #
@@ -492,4 +529,4 @@ if __name__ == '__main__':
     # calRMS(obsids, rmsDir, solDir)
 
     print("AMP SMOOTHNESS")
-    calAmpSmoothness(obsids, solDir, smoothDir, labels)
+    calAmpSmoothness(obsids, solDir, smoothDir, pointingCentres)
