@@ -23,7 +23,7 @@ def getDirs():
         sys.exit('data.in file does not exist')
 
     with open(file) as f:
-        temp = f.read.splitlines()
+        temp = f.read().splitlines()
 
     statsDir = temp[0]
     rmsDir = temp[1]
@@ -485,11 +485,11 @@ if __name__ == '__main__':
 
     # Attemp Ridhima's QA pipeline
     obsids = point1 + point2 + point3
-    # print("Calibration variance")
-    # calVar(obsids, varDir, solDir)
-    #
-    # print("Calibration RMS")
-    # calRMS(obsids, rmsDir, solDir)
+    print("Calibration variance")
+    calVar(obsids, varDir, solDir)
+
+    print("Calibration RMS")
+    calRMS(obsids, rmsDir, solDir)
 
     print("AMP SMOOTHNESS")
     calAmpSmoothness(obsids, solDir, smoothDir, labels)
