@@ -31,19 +31,23 @@ def getDirs():
     varDir = temp[2]
     smoothDir = temp[3]
     solDir = temp[4]
-    distribution = temp[5].split(' ')[0]
+    if (not Path(solDir).exists()):
+        sys.exit(f'The inputed solutions directory {solDir} does not exist')
+
+    stats = temp[5]
+    distribution = temp[6].split(' ')[0]
 
     if (distribution == "cyclic"):
-        if (len(temp[5].split()) != 2):
+        if (len(temp[6].split()) != 2):
             sys.exit('Please enter a period (T) for your observations')
-        period = temp[5].split()[1]
-        if (len(temp) != 6 + int(period)):
+        period = temp[6].split()[1]
+        if (len(temp) != 7 + int(period)):
             sys.exit(
                 f'You have put down the observations as cyclicly distributed with a period of {period}, but have not included that many pointing center labels')
         pointingCentres = list()
 
         for i in range(1, int(period) + 1):
-            pointingCentres.append(temp[5 + i])
+            pointingCentres.append(temp[6 + i])
 
     # Else I assume the observations should be in increasing order, and thus
     # pointing centers do not matter
@@ -53,7 +57,7 @@ def getDirs():
         sys.exit(
             'Please input either \'sorted\' or \'cyclic\' distribution of observations')
 
-    return statsDir, rmsDir, varDir, smoothDir, solDir, distribution, pointingCentres
+    return statsDir, rmsDir, varDir, smoothDir, solDir, stats, distribution, pointingCentres
 
 
 def getRMS(filename):
@@ -95,7 +99,7 @@ def getObsVec(directory, distribution):
 
     # Grab all obsid and sort
     for file in os.listdir(directory):
-        if os.path.isfile(directory + file) and file.endswith(".tsv"):
+        if os.path.isfile(directory + file) and file.endswith("_solutions.fits"):
             obsid = file.split('_')[0]
             temp.append(obsid)
 
@@ -427,7 +431,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
 
             plt.plot(ant, allObsYYSmoothness[i], label=obs, linestyle=style)
     elif (distribution == 'sorted'):
-        c1 = categorical_cmap(15, 2, cmap="tab20")
+        c1 = categorical_cmap(20, 2, cmap="tab20")
         plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
         for i in range(0, len(obsids)):
             obs = obsids[i]
@@ -470,99 +474,101 @@ if __name__ == '__main__':
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
 
-    statsDir, rmsDir, varDir, smoothDir, solDir, distribution, pointingCentres = getDirs()
-    print(distribution)
-    print(pointingCentres)
+    statsDir, rmsDir, varDir, smoothDir, solDir, stats, distribution, pointingCentres = getDirs()
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
     Path(smoothDir).mkdir(parents=True, exist_ok=True)
 
     # Group obsid
-    obsids = getObsVec(statsDir, distribution)
+    obsids = getObsVec(solDir, distribution)
+    print(obsids)
 
-    if (distribution == 'cyclic'):
-        print('CYCLING DISTRIBUTION SELECTED')
-        period = len(pointingCentres)
-        idx = int(len(obsids)/period)
-        print('FIRST POINTING CENTER : ', pointingCentres[0])
-        print(obsids[0:idx])
-        print('SECOND POINTING CENTER: ', pointingCentres[1])
-        print(obsids[idx: 2*idx])
-        print('THIRD POINTING CENTER : ', pointingCentres[2])
-        print(obsids[2*idx:])
+    if (stats == 'image' or stats == 'both'):
 
-    # Get RMS for obs
-    rms = getRMSVec(statsDir, obsids)
+        if (distribution == 'cyclic'):
+            print('CYCLING DISTRIBUTION SELECTED')
+            period = len(pointingCentres)
+            idx = int(len(obsids)/period)
+            print('FIRST POINTING CENTER : ', pointingCentres[0])
+            print(obsids[0:idx])
+            print('SECOND POINTING CENTER: ', pointingCentres[1])
+            print(obsids[idx: 2*idx])
+            print('THIRD POINTING CENTER : ', pointingCentres[2])
+            print(obsids[2*idx:])
 
-    if (distribution == 'cyclic'):
-        idx = int(len(obsids)/period)
-        for i in range(0, period - 1):
-            plt.plot(obsids[i*idx:(i+1)*idx], rms[i*idx:(i+1)*idx],
-                     label=pointingCentres[i])
+        # Get RMS for obs
+        rms = getRMSVec(statsDir, obsids)
 
-        # Print the last pointing centre
-        i += 1
-        plt.plot(obsids[i*idx:], rms[i*idx:], label=pointingCentres[i])
+        if (distribution == 'cyclic'):
+            idx = int(len(obsids)/period)
+            for i in range(0, period - 1):
+                plt.plot(obsids[i*idx:(i+1)*idx], rms[i*idx:(i+1)*idx],
+                         label=pointingCentres[i])
 
-        plt.legend()
-    elif (distribution == 'sorted'):
-        plt.plot(obsids, rms)
+            # Print the last pointing centre
+            i += 1
+            plt.plot(obsids[i*idx:], rms[i*idx:], label=pointingCentres[i])
 
-    plt.xticks(rotation=90)
-    plt.ylabel("RMS (Jy/beam)")
-    plt.savefig("obs_rms.pdf", bbox_inches='tight')
-    plt.clf()
+            plt.legend()
+        elif (distribution == 'sorted'):
+            plt.plot(obsids, rms)
 
-    # Get max for obs
-    max = getMaxVec(statsDir, obsids)
+        plt.xticks(rotation=90)
+        plt.ylabel("RMS (Jy/beam)")
+        plt.savefig("obs_rms.pdf", bbox_inches='tight')
+        plt.clf()
 
-    if (distribution == 'cyclic'):
-        idx = int(len(obsids)/period)
-        for i in range(0, period - 1):
-            plt.plot(obsids[i*idx:(i+1)*idx], max[i*idx:(i+1)*idx],
-                     label=pointingCentres[i])
+        # Get max for obs
+        max = getMaxVec(statsDir, obsids)
 
-        # Print the last pointing centre
-        i += 1
-        plt.plot(obsids[i*idx:], max[i*idx:], label=pointingCentres[i])
+        if (distribution == 'cyclic'):
+            idx = int(len(obsids)/period)
+            for i in range(0, period - 1):
+                plt.plot(obsids[i*idx:(i+1)*idx], max[i*idx:(i+1)*idx],
+                         label=pointingCentres[i])
 
-        plt.legend()
-    elif (distribution == 'sorted'):
-        plt.plot(obsids, max)
-    plt.xticks(rotation=90)
-    plt.ylabel("Maximum")
-    plt.savefig("obs_max.pdf", bbox_inches='tight')
-    plt.clf()
+            # Print the last pointing centre
+            i += 1
+            plt.plot(obsids[i*idx:], max[i*idx:], label=pointingCentres[i])
 
-    # Get DR for obs
-    dr = getDRVec(statsDir, obsids)
+            plt.legend()
+        elif (distribution == 'sorted'):
+            plt.plot(obsids, max)
+        plt.xticks(rotation=90)
+        plt.ylabel("Maximum")
+        plt.savefig("obs_max.pdf", bbox_inches='tight')
+        plt.clf()
 
-    if (distribution == 'cyclic'):
-        idx = int(len(obsids)/period)
-        for i in range(0, period - 1):
-            plt.plot(obsids[i*idx:(i+1)*idx], dr[i*idx:(i+1)*idx],
-                     label=pointingCentres[i])
+        # Get DR for obs
+        dr = getDRVec(statsDir, obsids)
 
-        # Print the last pointing centre
-        i += 1
-        plt.plot(obsids[i*idx:], dr[i*idx:], label=pointingCentres[i])
+        if (distribution == 'cyclic'):
+            idx = int(len(obsids)/period)
+            for i in range(0, period - 1):
+                plt.plot(obsids[i*idx:(i+1)*idx], dr[i*idx:(i+1)*idx],
+                         label=pointingCentres[i])
 
-        plt.legend()
-    elif (distribution == 'sorted'):
-        plt.plot(obsids, dr)
+            # Print the last pointing centre
+            i += 1
+            plt.plot(obsids[i*idx:], dr[i*idx:], label=pointingCentres[i])
 
-    plt.xticks(rotation=90)
-    plt.ylabel("Dynamic Range (max/rms)")
-    plt.savefig("obs_dynamic_range.pdf", bbox_inches='tight')
-    plt.clf()
+            plt.legend()
+        elif (distribution == 'sorted'):
+            plt.plot(obsids, dr)
 
-    # Attemp Ridhima's QA pipeline
-    # print("Calibration variance")
-    # calVar(obsids, varDir, solDir)
-    #
-    # print("Calibration RMS")
-    # calRMS(obsids, rmsDir, solDir)
+        plt.xticks(rotation=90)
+        plt.ylabel("Dynamic Range (max/rms)")
+        plt.savefig("obs_dynamic_range.pdf", bbox_inches='tight')
+        plt.clf()
 
-    print("AMP SMOOTHNESS")
-    calAmpSmoothness(obsids, solDir, smoothDir, distribution)
+    if (stats == 'calibration' or stats == 'both'):
+        # Attemp Ridhima's QA pipeline
+        print("Calibration variance")
+        calVar(obsids, varDir, solDir)
+
+        print("Calibration RMS")
+        calRMS(obsids, rmsDir, solDir)
+
+        print("AMP SMOOTHNESS")
+        calAmpSmoothness(obsids, solDir, smoothDir, distribution)
