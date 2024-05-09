@@ -257,6 +257,37 @@ def interpChoices(x, y, interp_type):
     return y
 
 
+def plotSmoothnessAllObs(obsids, ant, smoothness, distribution, pol):
+    if (distribution == 'cyclic'):
+        linestyles = ['solid', 'dashed', 'dotted', 'dashdot']
+        j = 0
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            if (np.mod(i, 9) == 0):
+                style = linestyles[j]
+                j += 1
+
+            plt.plot(ant, smoothness[i], label=obs, linestyle=style)
+    elif (distribution == 'sorted'):
+        c1 = categorical_cmap(15, 2, cmap="tab20")
+        plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            print(i, obs, len(smoothness))
+            plt.plot(ant, smoothness[i], alpha=0.7, label=obs)
+
+    ax = plt.gca()
+    lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
+    plt.xlabel('Antenna number')
+    plt.ylabel('Smoothness')
+    plt.xticks(np.linspace(0, 127, 128), minor=True)
+    plt.grid()
+    plt.grid(which='minor', alpha=0.5)
+    plt.savefig(smoothDir + 'all_obs_' + pol + '_linear.pdf',
+                bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.clf()
+
+
 def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
     x = np.linspace(0, 3073, 3072)
     ant = np.linspace(0, 127, 128)
@@ -392,61 +423,10 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
         plt.clf()
 
     # Save figure for all obsids XX
-    if (distribution == 'cyclic'):
-        linestyles = ['solid', 'dashed', 'dotted', 'dashdot']
-        j = 0
-        for i in range(0, len(obsids)):
-            obs = obsids[i]
-            if (np.mod(i, 9) == 0):
-                style = linestyles[j]
-                j += 1
-
-            plt.plot(ant, allObsXXSmoothness[i], label=obs, linestyle=style)
-    elif (distribution == 'sorted'):
-        c1 = categorical_cmap(15, 2, cmap="tab20")
-        plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
-        for i in range(0, len(obsids)):
-            obs = obsids[i]
-            plt.plot(ant, allObsXXSmoothness[i], alpha=0.7, label=obs)
-
-    ax = plt.gca()
-    lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-    plt.xlabel('Antenna number')
-    plt.ylabel('Smoothness')
-    plt.xticks(np.linspace(0, 127, 128), minor=True)
-    plt.grid()
-    plt.grid(which='minor', alpha=0.5)
-    plt.savefig(smoothDir + 'all_obs_xx_linear.pdf',
-                bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.clf()
-
-    # Save figure for all obsids YY
-    if (distribution == 'cyclic'):
-        j = 0
-        for i in range(0, len(obsids)):
-            obs = obsids[i]
-            if (np.mod(i, 9) == 0):
-                style = linestyles[j]
-                j += 1
-
-            plt.plot(ant, allObsYYSmoothness[i], label=obs, linestyle=style)
-    elif (distribution == 'sorted'):
-        c1 = categorical_cmap(20, 2, cmap="tab20")
-        plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
-        for i in range(0, len(obsids)):
-            obs = obsids[i]
-            plt.plot(ant, allObsYYSmoothness[i], alpha=0.7, label=obs)
-
-    ax = plt.gca()
-    lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
-    plt.xlabel('Antenna number')
-    plt.ylabel('Smoothness')
-    plt.xticks(np.linspace(0, 127, 128), minor=True)
-    plt.grid()
-    plt.grid(which='minor', alpha=0.5)
-    plt.savefig(smoothDir + 'all_obs_yy_linear.pdf',
-                bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.clf()
+    print("SAVING ALL XX", len(xxSmoothnessAll))
+    plotSmoothnessAllObs(obsids, ant, xxSmoothnessAll, distribution, 'xx')
+    print("SAVING ALL YY", len(yySmoothnessAll))
+    plotSmoothnessAllObs(obsids, ant, yySmoothnessAll, distribution, 'yy')
 
 
 # Straight up took this from https://stackoverflow.com/questions/47222585/matplotlib-generic-colormap-from-tab10,
