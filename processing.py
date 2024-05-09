@@ -31,23 +31,33 @@ def getDirs():
     varDir = temp[2]
     smoothDir = temp[3]
     solDir = temp[4]
+
     if (not Path(solDir).exists()):
         sys.exit(f'The inputed solutions directory {solDir} does not exist')
 
     stats = temp[5]
-    distribution = temp[6].split(' ')[0]
+    numExclude = temp[6].split(' ')[0]
+    excludeList = []
+    if (numExclude != '0'):
+        if (len(temp[6].split(' ')) < 2):
+            sys.exit('Please include which observations you would like to exclude')
+
+        for obs in temp[6].split(' ')[1:]:
+            excludeList.append(obs)
+
+    distribution = temp[7].split(' ')[0]
 
     if (distribution == "cyclic"):
-        if (len(temp[6].split()) != 2):
+        if (len(temp[7].split()) != 2):
             sys.exit('Please enter a period (T) for your observations')
-        period = temp[6].split()[1]
-        if (len(temp) != 7 + int(period)):
+        period = temp[7].split()[1]
+        if (len(temp) != 8 + int(period)):
             sys.exit(
                 f'You have put down the observations as cyclicly distributed with a period of {period}, but have not included that many pointing center labels')
         pointingCentres = list()
 
         for i in range(1, int(period) + 1):
-            pointingCentres.append(temp[6 + i])
+            pointingCentres.append(temp[7 + i])
 
     # Else I assume the observations should be in increasing order, and thus
     # pointing centers do not matter
@@ -57,7 +67,7 @@ def getDirs():
         sys.exit(
             'Please input either \'sorted\' or \'cyclic\' distribution of observations')
 
-    return statsDir, rmsDir, varDir, smoothDir, solDir, stats, distribution, pointingCentres
+    return statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution, pointingCentres
 
 
 def getRMS(filename):
@@ -269,12 +279,11 @@ def plotSmoothnessAllObs(obsids, ant, smoothness, distribution, pol):
 
             plt.plot(ant, smoothness[i], label=obs, linestyle=style)
     elif (distribution == 'sorted'):
-        c1 = categorical_cmap(15, 2, cmap="tab20")
-        plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
+        colors = plt.cm.jet(np.linspace(0, 1, len(obsids)))
+        # plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
         for i in range(0, len(obsids)):
             obs = obsids[i]
-            print(i, obs, len(smoothness))
-            plt.plot(ant, smoothness[i], alpha=0.7, label=obs)
+            plt.plot(ant, smoothness[i], alpha=0.7, label=obs, color=colors[i])
 
     ax = plt.gca()
     lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
@@ -316,7 +325,6 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
                 if ((np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0)):
                     xxSmoothness.append(np.nan)
                     yySmoothness.append(np.nan)
-                    # print("SKIPPED, ", j)
                     continue
 
                 yreal = interpChoices(x, yreal, interp_type)
@@ -423,38 +431,15 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
         plt.clf()
 
     # Save figure for all obsids XX
-    print("SAVING ALL XX", len(xxSmoothnessAll))
-    plotSmoothnessAllObs(obsids, ant, xxSmoothnessAll, distribution, 'xx')
-    print("SAVING ALL YY", len(yySmoothnessAll))
-    plotSmoothnessAllObs(obsids, ant, yySmoothnessAll, distribution, 'yy')
-
-
-# Straight up took this from https://stackoverflow.com/questions/47222585/matplotlib-generic-colormap-from-tab10,
-# Thank you.
-def categorical_cmap(nc, nsc, cmap="tab10", continuous=False):
-    if nc > plt.get_cmap(cmap).N:
-        raise ValueError("Too many categories for colormap.")
-    if continuous:
-        ccolors = plt.get_cmap(cmap)(np.linspace(0, 1, nc))
-    else:
-        ccolors = plt.get_cmap(cmap)(np.arange(nc, dtype=int))
-    cols = np.zeros((nc*nsc, 3))
-    for i, c in enumerate(ccolors):
-        chsv = matplotlib.colors.rgb_to_hsv(c[:3])
-        arhsv = np.tile(chsv, nsc).reshape(nsc, 3)
-        arhsv[:, 1] = np.linspace(chsv[1], 0.25, nsc)
-        arhsv[:, 2] = np.linspace(chsv[2], 1, nsc)
-        rgb = matplotlib.colors.hsv_to_rgb(arhsv)
-        cols[i*nsc:(i+1)*nsc, :] = rgb
-    cmap = matplotlib.colors.ListedColormap(cols)
-    return cmap
+    plotSmoothnessAllObs(obsids, ant, allObsXXSmoothness, distribution, 'xx')
+    plotSmoothnessAllObs(obsids, ant, allObsYYSmoothness, distribution, 'yy')
 
 
 if __name__ == '__main__':
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
 
-    statsDir, rmsDir, varDir, smoothDir, solDir, stats, distribution, pointingCentres = getDirs()
+    statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution, pointingCentres = getDirs()
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
@@ -462,7 +447,12 @@ if __name__ == '__main__':
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
-    print(obsids)
+    for i in range(0, len(excludeList)):
+        obsids.remove(excludeList[i])
+
+    print('INCLUDED OBS: ', obsids)
+    print('EXCLUDED OBS: ', excludeList)
+    print('TOTAL NUMBER OF OBSERVATIONS: ', len(obsids))
 
     if (stats == 'image' or stats == 'both'):
 
