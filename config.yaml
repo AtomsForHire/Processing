@@ -1,0 +1,8 @@
+stats_dir: ./
+rms_dir: ./rms_cal/both
+var_dir: ./var_cal/both
+smooth_dir: ./smoothness
+sol_dir: ../rerun_2_solutions
+statistics: both # both/image/calibration
+obs_dist: sorted # sorted/grid point
+exclude: # list
