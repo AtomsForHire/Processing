@@ -10,64 +10,56 @@ from mwa_qa import read_calfits
 from tqdm import tqdm
 from pathlib import Path
 import json
+import yaml
 import sys
 import matplotlib.colors
 
 
-def getDirs():
-    """
+def getDirs(filename):
 
-    """
-    file = 'data.in'
+    with open(filename) as f:
+        temp = yaml.safe_load(f)
+        if ("stats_dir" in temp.keys()):
+            statsDir = temp["stats_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE stats_dir IN CONFIG FILE")
 
-    if not Path(file).exists():
-        sys.exit('data.in file does not exist')
+        if ("rms_dir" in temp.keys()):
+            rmsDir = temp["rms_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE rms_dir IN CONFIG FILE")
 
-    with open(file) as f:
-        temp = f.read().splitlines()
+        if ("var_dir" in temp.keys()):
+            varDir = temp["var_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE var_dir IN CONFIG FILE")
 
-    statsDir = temp[0]
-    rmsDir = temp[1]
-    varDir = temp[2]
-    smoothDir = temp[3]
-    solDir = temp[4]
+        if ("smooth_dir" in temp.keys()):
+            smoothDir = temp["smooth_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE smooth_dir IN CONFIG FILE")
 
-    if (not Path(solDir).exists()):
-        sys.exit(f'The inputed solutions directory {solDir} does not exist')
+        if ("sol_dir" in temp.keys()):
+            solDir = temp["sol_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE sol_dir IN CONFIG FILE")
 
-    stats = temp[5]
-    numExclude = temp[6].split(' ')[0]
-    excludeList = []
-    if (numExclude != '0'):
-        if (len(temp[6].split(' ')) < 2):
-            sys.exit('Please include which observations you would like to exclude')
+        if ("statistics" in temp.keys()):
+            stats = temp["statistics"]
+        else:
+            sys.exit("PLEASE INCLUDE statistics IN CONFIG FILE")
 
-        for obs in temp[6].split(' ')[1:]:
-            excludeList.append(obs)
+        if ("obs_dist" in temp.keys()):
+            distribution = temp["obs_dist"]
+        else:
+            sys.exit("PLEASE INCLUDE obs_dist IN CONFIG FILE")
 
-    distribution = temp[7].split(' ')[0]
+        if ("exclude" in temp.keys()):
+            excludeList = temp["exclude"]
+        else:
+            sys.exit("PLEASE INCLUDE exclude IN CONFIG FILE")
 
-    if (distribution == "cyclic"):
-        if (len(temp[7].split()) != 2):
-            sys.exit('Please enter a period (T) for your observations')
-        period = temp[7].split()[1]
-        if (len(temp) != 8 + int(period)):
-            sys.exit(
-                f'You have put down the observations as cyclicly distributed with a period of {period}, but have not included that many pointing center labels')
-        pointingCentres = list()
-
-        for i in range(1, int(period) + 1):
-            pointingCentres.append(temp[7 + i])
-
-    # Else I assume the observations should be in increasing order, and thus
-    # pointing centers do not matter
-    elif (distribution == 'sorted'):
-        pointingCentres = []
-    else:
-        sys.exit(
-            'Please input either \'sorted\' or \'cyclic\' distribution of observations')
-
-    return statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution, pointingCentres
+    return statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution
 
 
 def getRMS(filename):
@@ -109,7 +101,7 @@ def getObsVec(directory, distribution):
 
     # Grab all obsid and sort
     for file in os.listdir(directory):
-        if os.path.isfile(directory + file) and file.endswith("_solutions.fits"):
+        if os.path.isfile(directory + "/" + file) and file.endswith("_solutions.fits"):
             obsid = file.split('_')[0]
             temp.append(obsid)
 
@@ -135,6 +127,9 @@ def getRMSVec(directory, obsids):
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
             obsid = file.split('_')[0]
+            if (obsid not in obsids):
+                continue
+
             rms = getRMS(file)
 
             rmsVec[obsids.index(obsid)] = rms
@@ -154,6 +149,8 @@ def getMaxVec(directory, obsids):
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
             obsid = file.split('_')[0]
+            if (obsid not in obsids):
+                continue
             max = getMax(file)
 
             maxVec[obsids.index(obsid)] = max
@@ -173,6 +170,8 @@ def getDRVec(directory, obsids):
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
             obsid = file.split('_')[0]
+            if (obsid not in obsids):
+                continue
             max = getMax(file)
             rms = getRMS(file)
             dr = max/rms
@@ -188,8 +187,8 @@ def calVar(obsids, varDir, solDir):
 
     for i in tqdm(range(0, len(obsids))):
         obsid = obsids[i]
-        calfitsPath = solDir + str(obsid) + '_solutions.fits'
-        metfitsPath = solDir + str(obsid) + '.metafits'
+        calfitsPath = solDir + '/' + str(obsid) + '_solutions.fits'
+        metfitsPath = solDir + '/' + str(obsid) + '.metafits'
 
         calObj = cal_metrics.CalMetrics(calfitsPath, metfitsPath)
         calObj.run_metrics()
@@ -204,14 +203,14 @@ def calVar(obsids, varDir, solDir):
         plt.xticks(np.linspace(0, 127, 128), minor=True)
         plt.grid()
         plt.grid(which='minor', alpha=0.5)
-        plt.savefig(varDir + obsid + '_var.pdf', bbox_inches='tight')
+        plt.savefig(varDir + '/' + obsid + '_var.pdf', bbox_inches='tight')
         plt.clf()
         calObj.write_to()
 
 
 def calRMS(obsids, rmsDir, solDir):
     for i in tqdm(range(0, len(obsids))):
-        metPath = solDir + \
+        metPath = solDir + '/' + \
             obsids[i] + '_solutions_cal_metrics.json'
         with open(metPath) as f:
             calibration = json.load(f)
@@ -225,7 +224,7 @@ def calRMS(obsids, rmsDir, solDir):
         plt.xticks(np.linspace(0, 127, 128), minor=True)
         plt.grid()
         plt.grid(which='minor', alpha=0.5)
-        plt.savefig(rmsDir + obsids[i] + '_rms.pdf', bbox_inches='tight')
+        plt.savefig(rmsDir + '/' + obsids[i] + '_rms.pdf', bbox_inches='tight')
         plt.clf()
 
 
@@ -292,7 +291,7 @@ def plotSmoothnessAllObs(obsids, ant, smoothness, distribution, pol):
     plt.xticks(np.linspace(0, 127, 128), minor=True)
     plt.grid()
     plt.grid(which='minor', alpha=0.5)
-    plt.savefig(smoothDir + 'all_obs_' + pol + '_linear.pdf',
+    plt.savefig(smoothDir + '/' + 'all_obs_' + pol + '_linear.pdf',
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.clf()
 
@@ -306,7 +305,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
     allObsYYSmoothness = list()
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
-        filename = solDir + obs + "_solutions.fits"
+        filename = solDir + "/" + obs + "_solutions.fits"
         cal = read_calfits.CalFits(filename)
 
         xxSmoothnessAll = list()
@@ -398,7 +397,8 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
             plt.xticks(np.linspace(0, 127, 128), minor=True)
             plt.grid()
             plt.grid(which='minor', alpha=0.5)
-            plt.savefig(smoothDir + str(obs) + "_" + interp_type + ".pdf")
+            plt.savefig(smoothDir + '/' + str(obs) +
+                        "_" + interp_type + ".pdf")
             plt.clf()
 
         # Save figure for all interp types
@@ -427,7 +427,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
         plt.xticks(np.linspace(0, 127, 128), minor=True)
         plt.grid()
         plt.grid(which='minor', alpha=0.5)
-        plt.savefig(smoothDir + str(obs) + "_all.pdf")
+        plt.savefig(smoothDir + '/' + str(obs) + "_all.pdf")
         plt.clf()
 
     # Save figure for all obsids XX
@@ -438,8 +438,9 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
 if __name__ == '__main__':
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
-
-    statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution, pointingCentres = getDirs()
+    config = sys.argv[1]
+    statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution = getDirs(
+        config)
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
@@ -447,8 +448,9 @@ if __name__ == '__main__':
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
-    for i in range(0, len(excludeList)):
-        obsids.remove(excludeList[i])
+    if (excludeList is not None):
+        for i in range(0, len(excludeList)):
+            obsids.remove(str(excludeList[i]))
 
     print('INCLUDED OBS: ', obsids)
     print('EXCLUDED OBS: ', excludeList)
