@@ -506,7 +506,7 @@ if __name__ == '__main__':
         elif (distribution == 'sorted'):
             plt.plot(obsids, max)
         plt.xticks(rotation=90)
-        plt.ylabel("Maximum")
+        plt.ylabel("Maximum (Jy/beam)")
         plt.savefig("obs_max.pdf", bbox_inches='tight')
         plt.clf()
 
