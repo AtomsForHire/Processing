@@ -90,37 +90,74 @@ def interpChoices(x, y, interp_type):
     return y
 
 
-def plotSmoothnessAllObs(obsids, ant, smoothness, smoothDir, distribution, pol):
-    if (distribution == 'cyclic'):
+def plotSmoothnessAllObs(obsids, ant, smoothness, smoothDir, distribution, pol, gridDict, uniqueDict):
+    colors = plt.cm.jet(np.linspace(0, 1, len(obsids)))
+    if (distribution == 'grid'):
         linestyles = ['solid', 'dashed', 'dotted', 'dashdot']
-        j = 0
-        for i in range(0, len(obsids)):
-            obs = obsids[i]
-            if (np.mod(i, 9) == 0):
-                style = linestyles[j]
-                j += 1
+        marker = [' ', '.', 's', 'o', '*', 'x',]
+        styles = {}
 
-            plt.plot(ant, smoothness[i], label=obs, linestyle=style)
-    elif (distribution == 'sorted'):
-        colors = plt.cm.jet(np.linspace(0, 1, len(obsids)))
-        # plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
+        for i, key in enumerate(uniqueDict):
+            styles[key] = [linestyles[i %
+                                      len(linestyles)], marker[int(i//len(linestyles))]]
+
+        obs_legend_list = list()
         for i in range(0, len(obsids)):
             obs = obsids[i]
-            plt.plot(ant, smoothness[i], alpha=0.7, label=obs, color=colors[i])
+
+            temp, = plt.plot(ant, smoothness[i], label=obs,
+                             linestyle=styles[gridDict[obs]][0], marker=styles[gridDict[obs]][1], color=colors[i])
+
+            obs_legend_list.append(temp)
+
+        # Handle legend for grid points
+        grid_legend_list = list()
+        for key in styles:
+            temp, = plt.plot(-1, color='gray',
+                             linestyle=styles[key][0], marker=styles[key][1], label=key)
+            grid_legend_list.append(temp)
+
+        ax = plt.gca()
+        grid_legend = ax.legend(handles=grid_legend_list, bbox_to_anchor=(1.4, 0.5
+                                                                          ), loc='center left')
+        obs_legend = ax.legend(handles=obs_legend_list,
+                               bbox_to_anchor=(1.04, 0.5), loc='center left')
+
+        ax.add_artist(grid_legend)
+
+    elif (distribution == 'sorted'):
+        # plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
+        obs_legend_list = list()
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            temp, = plt.plot(
+                ant, smoothness[i], alpha=0.7, label=obs, color=colors[i])
+
+            obs_legend_list.append(temp)
+
+        ax = plt.gca()
+        obs_legend = ax.legend(handles=obs_legend_list,
+                               bbox_to_anchor=(1.04, 0.5), loc='center left')
+
+        ax.add_artist(obs_legend)
 
     ax = plt.gca()
-    lgd = ax.legend(bbox_to_anchor=(1.04, 0.5), loc='center left')
     plt.xlabel('Antenna number')
     plt.ylabel('Smoothness')
     plt.xticks(np.linspace(0, 127, 128), minor=True)
     plt.grid()
     plt.grid(which='minor', alpha=0.5)
+    plt.ylim(0.95 * np.nanmin(smoothness), 1.05 * np.nanmax(smoothness))
+    bbox_artists = [obs_legend]
+    if (distribution == 'grid'):
+        bbox_artists.append(grid_legend)
+
     plt.savefig(smoothDir + '/' + 'all_obs_' + pol + '_linear.pdf',
-                bbox_extra_artists=(lgd,), bbox_inches='tight')
+                bbox_extra_artists=(bbox_artists), bbox_inches='tight')
     plt.clf()
 
 
-def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
+def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDict):
     x = np.linspace(0, 3073, 3072)
     ant = np.linspace(0, 127, 128)
     # interps = ['zero', 'linear', 'cspline']
@@ -256,6 +293,6 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
 
     # Save figure for all obsids XX
     plotSmoothnessAllObs(obsids, ant, allObsXXSmoothness,
-                         smoothDir, distribution, 'xx')
+                         smoothDir, distribution, 'xx', gridDict, uniqueDict)
     plotSmoothnessAllObs(obsids, ant, allObsYYSmoothness,
-                         smoothDir, distribution, 'yy')
+                         smoothDir, distribution, 'yy', gridDict, uniqueDict)

@@ -10,6 +10,18 @@ import collections
 from astropy.io import fits
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def getDirs(filename):
 
     with open(filename) as f:
@@ -92,7 +104,6 @@ def getGridNum(obsids, solDir):
         with fits.open(solDir + '/' + str(obs) + '.metafits') as hdu:
             hdr = hdu['PRIMARY'].header
             gridDict[obs] = hdr['GRIDNUM']
-            print(obs, hdr['GRIDNUM'])
 
     return gridDict
 
@@ -118,11 +129,11 @@ if __name__ == '__main__':
     gridDict = getGridNum(obsids, solDir)
     uniqueDict = collections.Counter(gridDict.values())
 
-    print('INCLUDED OBS: ', obsids)
-    print('EXCLUDED OBS: ', excludeList)
-    print('TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED: ', len(obsids))
-    print('OBSERVATIONS AND THEIR GRIDNUM: ', gridDict)
-    sys.exit()
+    print(f'{bcolors.OKBLUE}INCLUDED OBS{bcolors.ENDC}: {obsids}')
+    print(f'{bcolors.OKBLUE}EXCLUDED OBS{bcolors.ENDC}: {excludeList}')
+    print(f'{bcolors.OKBLUE}TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED{bcolors.ENDC}: ', len(obsids))
+    print(f'{bcolors.OKBLUE}OBSERVATIONS AND THEIR GRIDNUM{bcolors.ENDC}: {gridDict}')
+    print(f'{bcolors.OKBLUE}UNIQUE GRIDNUMS AND FREQUENCY {bcolors.ENDC}: {len(uniqueDict)} {uniqueDict}')
 
     if (stats == 'image' or stats == 'both'):
         # Get RMS for obs
@@ -136,11 +147,12 @@ if __name__ == '__main__':
 
     if (stats == 'calibration' or stats == 'both'):
         # Attemp Ridhima's QA pipeline
-        print("Calibration variance")
-        calibration.calVar(obsids, varDir, solDir)
-
-        print("Calibration RMS")
-        calibration.calRMS(obsids, rmsDir, solDir)
+        # print("Calibration variance")
+        # calibration.calVar(obsids, varDir, solDir)
+        #
+        # print("Calibration RMS")
+        # calibration.calRMS(obsids, rmsDir, solDir)
 
         print("AMP SMOOTHNESS")
-        calibration.calAmpSmoothness(obsids, solDir, smoothDir, distribution)
+        calibration.calAmpSmoothness(
+            obsids, solDir, smoothDir, distribution, gridDict, uniqueDict)
