@@ -1,11 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mwa_qa import read_metafits
 from mwa_qa import cal_metrics
 from mwa_qa import read_calfits
 from tqdm import tqdm
 import json
-import matplotlib.colors
 import math
 
 
@@ -92,7 +90,7 @@ def interpChoices(x, y, interp_type):
     return y
 
 
-def plotSmoothnessAllObs(obsids, ant, smoothness, distribution, pol):
+def plotSmoothnessAllObs(obsids, ant, smoothness, smoothDir, distribution, pol):
     if (distribution == 'cyclic'):
         linestyles = ['solid', 'dashed', 'dotted', 'dashdot']
         j = 0
@@ -257,5 +255,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution):
         plt.clf()
 
     # Save figure for all obsids XX
-    plotSmoothnessAllObs(obsids, ant, allObsXXSmoothness, distribution, 'xx')
-    plotSmoothnessAllObs(obsids, ant, allObsYYSmoothness, distribution, 'yy')
+    plotSmoothnessAllObs(obsids, ant, allObsXXSmoothness,
+                         smoothDir, distribution, 'xx')
+    plotSmoothnessAllObs(obsids, ant, allObsYYSmoothness,
+                         smoothDir, distribution, 'yy')

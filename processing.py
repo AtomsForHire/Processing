@@ -6,6 +6,8 @@ import os
 import sys
 import image
 import calibration
+import collections
+from astropy.io import fits
 
 
 def getDirs(filename):
@@ -84,6 +86,17 @@ def getObsVec(directory, distribution):
     return result
 
 
+def getGridNum(obsids, solDir):
+    gridDict = {}
+    for obs in obsids:
+        with fits.open(solDir + '/' + str(obs) + '.metafits') as hdu:
+            hdr = hdu['PRIMARY'].header
+            gridDict[obs] = hdr['GRIDNUM']
+            print(obs, hdr['GRIDNUM'])
+
+    return gridDict
+
+
 if __name__ == '__main__':
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
@@ -101,12 +114,17 @@ if __name__ == '__main__':
         for i in range(0, len(excludeList)):
             obsids.remove(str(excludeList[i]))
 
+    # If grid_num distribution is selected do some processing there
+    gridDict = getGridNum(obsids, solDir)
+    uniqueDict = collections.Counter(gridDict.values())
+
     print('INCLUDED OBS: ', obsids)
     print('EXCLUDED OBS: ', excludeList)
-    print('TOTAL NUMBER OF OBSERVATIONS: ', len(obsids))
+    print('TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED: ', len(obsids))
+    print('OBSERVATIONS AND THEIR GRIDNUM: ', gridDict)
+    sys.exit()
 
     if (stats == 'image' or stats == 'both'):
-
         # Get RMS for obs
         rms = image.getRMSVec(statsDir, obsids, distribution)
 
