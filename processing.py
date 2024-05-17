@@ -1,67 +1,69 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from pathlib import Path
-import yaml
+import collections
 import os
 import sys
-import image
-import calibration
-import collections
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import yaml
 from astropy.io import fits
+
+import calibration
+import image
 
 
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def getDirs(filename):
 
     with open(filename) as f:
         temp = yaml.safe_load(f)
-        if ("stats_dir" in temp.keys()):
+        if "stats_dir" in temp.keys():
             statsDir = temp["stats_dir"]
         else:
             sys.exit("PLEASE INCLUDE stats_dir IN CONFIG FILE")
 
-        if ("rms_dir" in temp.keys()):
+        if "rms_dir" in temp.keys():
             rmsDir = temp["rms_dir"]
         else:
             sys.exit("PLEASE INCLUDE rms_dir IN CONFIG FILE")
 
-        if ("var_dir" in temp.keys()):
+        if "var_dir" in temp.keys():
             varDir = temp["var_dir"]
         else:
             sys.exit("PLEASE INCLUDE var_dir IN CONFIG FILE")
 
-        if ("smooth_dir" in temp.keys()):
+        if "smooth_dir" in temp.keys():
             smoothDir = temp["smooth_dir"]
         else:
             sys.exit("PLEASE INCLUDE smooth_dir IN CONFIG FILE")
 
-        if ("sol_dir" in temp.keys()):
+        if "sol_dir" in temp.keys():
             solDir = temp["sol_dir"]
         else:
             sys.exit("PLEASE INCLUDE sol_dir IN CONFIG FILE")
 
-        if ("statistics" in temp.keys()):
+        if "statistics" in temp.keys():
             stats = temp["statistics"]
         else:
             sys.exit("PLEASE INCLUDE statistics IN CONFIG FILE")
 
-        if ("obs_dist" in temp.keys()):
+        if "obs_dist" in temp.keys():
             distribution = temp["obs_dist"]
         else:
             sys.exit("PLEASE INCLUDE obs_dist IN CONFIG FILE")
 
-        if ("exclude" in temp.keys()):
+        if "exclude" in temp.keys():
             excludeList = temp["exclude"]
         else:
             sys.exit("PLEASE INCLUDE exclude IN CONFIG FILE")
@@ -79,13 +81,13 @@ def getObsVec(directory, distribution):
     # Grab all obsid and sort
     for file in os.listdir(directory):
         if os.path.isfile(directory + "/" + file) and file.endswith("_solutions.fits"):
-            obsid = file.split('_')[0]
+            obsid = file.split("_")[0]
             temp.append(obsid)
 
     temp = sorted(temp)
     result = temp
 
-    if (distribution == 'cyclic'):
+    if distribution == "cyclic":
         # Sort all obsid into groups with different pointing centres
         for i in range(0, len(temp) - 2, 3):
             # print(i)
@@ -101,19 +103,20 @@ def getObsVec(directory, distribution):
 def getGridNum(obsids, solDir):
     gridDict = {}
     for obs in obsids:
-        with fits.open(solDir + '/' + str(obs) + '.metafits') as hdu:
-            hdr = hdu['PRIMARY'].header
-            gridDict[obs] = hdr['GRIDNUM']
+        with fits.open(solDir + "/" + str(obs) + ".metafits") as hdu:
+            hdr = hdu["PRIMARY"].header
+            gridDict[obs] = hdr["GRIDNUM"]
 
     return gridDict
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
     config = sys.argv[1]
-    statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution = getDirs(
-        config)
+    statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution = (
+        getDirs(config)
+    )
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
@@ -121,31 +124,40 @@ if __name__ == '__main__':
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
-    if (excludeList is not None):
+    if excludeList is not None:
         for i in range(0, len(excludeList)):
             obsids.remove(str(excludeList[i]))
 
-    # If grid_num distribution is selected do some processing there
+    # Regardless of whether grid sorting is selected or not, create dictionary of
+    # unique grid nums since they must be passed into the functions anyway
+    # the functions themselves will decide if they use grid or other sorting
     gridDict = getGridNum(obsids, solDir)
     uniqueDict = collections.Counter(gridDict.values())
+    # Sort by value
+    gridDict = {k: v for k, v in sorted(gridDict.items(), key=lambda item: item[1])}
 
-    print(f'{bcolors.OKBLUE}INCLUDED OBS{bcolors.ENDC}: {obsids}')
-    print(f'{bcolors.OKBLUE}EXCLUDED OBS{bcolors.ENDC}: {excludeList}')
-    print(f'{bcolors.OKBLUE}TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED{bcolors.ENDC}: ', len(obsids))
-    print(f'{bcolors.OKBLUE}OBSERVATIONS AND THEIR GRIDNUM{bcolors.ENDC}: {gridDict}')
-    print(f'{bcolors.OKBLUE}UNIQUE GRIDNUMS AND FREQUENCY {bcolors.ENDC}: {len(uniqueDict)} {uniqueDict}')
+    print(f"{bcolors.OKBLUE}INCLUDED OBS{bcolors.ENDC}: {obsids}")
+    print(f"{bcolors.OKBLUE}EXCLUDED OBS{bcolors.ENDC}: {excludeList}")
+    print(
+        f"{bcolors.OKBLUE}TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED{bcolors.ENDC}: ",
+        len(obsids),
+    )
+    print(f"{bcolors.OKBLUE}OBSERVATIONS AND THEIR GRIDNUM{bcolors.ENDC}: {gridDict}")
+    print(
+        f"{bcolors.OKBLUE}UNIQUE GRIDNUMS AND FREQUENCY {bcolors.ENDC}: {len(uniqueDict)} {uniqueDict}"
+    )
 
-    if (stats == 'image' or stats == 'both'):
+    if stats == "image" or stats == "both":
         # Get RMS for obs
-        rms = image.getRMSVec(statsDir, obsids, distribution)
+        rms = image.getRMSVec(statsDir, obsids, distribution, gridDict, uniqueDict)
 
         # Get max for obs
-        max = image.getMaxVec(statsDir, obsids, distribution)
+        max = image.getMaxVec(statsDir, obsids, distribution, gridDict, uniqueDict)
 
         # Get DR for obs
-        dr = image.getDRVec(statsDir, obsids, distribution)
+        dr = image.getDRVec(statsDir, obsids, distribution, gridDict, uniqueDict)
 
-    if (stats == 'calibration' or stats == 'both'):
+    if stats == "calibration" or stats == "both":
         # Attemp Ridhima's QA pipeline
         # print("Calibration variance")
         # calibration.calVar(obsids, varDir, solDir)
@@ -155,4 +167,5 @@ if __name__ == '__main__':
 
         print("AMP SMOOTHNESS")
         calibration.calAmpSmoothness(
-            obsids, solDir, smoothDir, distribution, gridDict, uniqueDict)
+            obsids, solDir, smoothDir, distribution, gridDict, uniqueDict
+        )

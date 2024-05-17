@@ -1,54 +1,55 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from mwa_qa import cal_metrics
-from mwa_qa import read_calfits
-from tqdm import tqdm
 import json
 import math
+
+import matplotlib.pyplot as plt
+import numpy as np
+from mwa_qa import cal_metrics, read_calfits
+from tqdm import tqdm
 
 
 def calVar(obsids, varDir, solDir):
 
     for i in tqdm(range(0, len(obsids))):
         obsid = obsids[i]
-        calfitsPath = solDir + '/' + str(obsid) + '_solutions.fits'
-        metfitsPath = solDir + '/' + str(obsid) + '.metafits'
+        calfitsPath = solDir + "/" + str(obsid) + "_solutions.fits"
+        metfitsPath = solDir + "/" + str(obsid) + ".metafits"
 
         calObj = cal_metrics.CalMetrics(calfitsPath, metfitsPath)
         calObj.run_metrics()
-        plt.plot(calObj.variance_for_baselines_less_than(1)
-                 [0, :, 0], label='XX', marker='.')
-        plt.plot(calObj.variance_for_baselines_less_than(1)
-                 [0, :, 3], label='YY', marker='.')
-        plt.title(obsid + ' XX + YY')
-        plt.xlabel('Antenna')
-        plt.ylabel('Variance')
+        plt.plot(
+            calObj.variance_for_baselines_less_than(1)[0, :, 0], label="XX", marker="."
+        )
+        plt.plot(
+            calObj.variance_for_baselines_less_than(1)[0, :, 3], label="YY", marker="."
+        )
+        plt.title(obsid + " XX + YY")
+        plt.xlabel("Antenna")
+        plt.ylabel("Variance")
         plt.legend()
         plt.xticks(np.linspace(0, 127, 128), minor=True)
         plt.grid()
-        plt.grid(which='minor', alpha=0.5)
-        plt.savefig(varDir + '/' + obsid + '_var.pdf', bbox_inches='tight')
+        plt.grid(which="minor", alpha=0.5)
+        plt.savefig(varDir + "/" + obsid + "_var.pdf", bbox_inches="tight")
         plt.clf()
         calObj.write_to()
 
 
 def calRMS(obsids, rmsDir, solDir):
     for i in tqdm(range(0, len(obsids))):
-        metPath = solDir + '/' + \
-            obsids[i] + '_solutions_cal_metrics.json'
+        metPath = solDir + "/" + obsids[i] + "_solutions_cal_metrics.json"
         with open(metPath) as f:
             calibration = json.load(f)
 
-        plt.plot(calibration["XX"]["RMS"], label='XX', marker='.')
-        plt.plot(calibration["YY"]["RMS"], label='YY', marker='.')
+        plt.plot(calibration["XX"]["RMS"], label="XX", marker=".")
+        plt.plot(calibration["YY"]["RMS"], label="YY", marker=".")
         plt.xlabel("Antenna")
         plt.ylabel("RMS")
-        plt.title(obsids[i] + ' XX + YY')
+        plt.title(obsids[i] + " XX + YY")
         plt.legend()
         plt.xticks(np.linspace(0, 127, 128), minor=True)
         plt.grid()
-        plt.grid(which='minor', alpha=0.5)
-        plt.savefig(rmsDir + '/' + obsids[i] + '_rms.pdf', bbox_inches='tight')
+        plt.grid(which="minor", alpha=0.5)
+        plt.savefig(rmsDir + "/" + obsids[i] + "_rms.pdf", bbox_inches="tight")
         plt.clf()
 
 
@@ -72,14 +73,14 @@ def nan_helper(y):
 
 
 def interpChoices(x, y, interp_type):
-    if (interp_type == "linear"):
+    if interp_type == "linear":
         nans, x = nan_helper(y)
         y[nans] = np.interp(x(nans), x(~nans), y[~nans])
 
-    if (interp_type == "zero"):
+    if interp_type == "zero":
         y = np.array([0 if math.isnan(x) else x for x in y])
 
-    if (interp_type == "cspline"):
+    if interp_type == "cspline":
         nans = np.isnan(y)
         x_interp = x[~nans]
         y_interp = y[~nans]
@@ -90,70 +91,99 @@ def interpChoices(x, y, interp_type):
     return y
 
 
-def plotSmoothnessAllObs(obsids, ant, smoothness, smoothDir, distribution, pol, gridDict, uniqueDict):
+def plotSmoothnessAllObs(
+    obsids, ant, smoothness, smoothDir, distribution, pol, gridDict, uniqueDict
+):
     colors = plt.cm.jet(np.linspace(0, 1, len(obsids)))
-    if (distribution == 'grid'):
-        linestyles = ['solid', 'dashed', 'dotted', 'dashdot']
-        marker = [' ', '.', 's', 'o', '*', 'x',]
+    if distribution == "grid":
+        linestyles = ["solid", "dashed", "dotted", "dashdot"]
+        marker = [
+            " ",
+            ".",
+            "s",
+            "o",
+            "*",
+            "x",
+        ]
         styles = {}
 
         for i, key in enumerate(uniqueDict):
-            styles[key] = [linestyles[i %
-                                      len(linestyles)], marker[int(i//len(linestyles))]]
+            styles[key] = [
+                linestyles[i % len(linestyles)],
+                marker[int(i // len(linestyles))],
+            ]
 
         obs_legend_list = list()
         for i in range(0, len(obsids)):
             obs = obsids[i]
 
-            temp, = plt.plot(ant, smoothness[i], label=obs,
-                             linestyle=styles[gridDict[obs]][0], marker=styles[gridDict[obs]][1], color=colors[i])
+            (temp,) = plt.plot(
+                ant,
+                smoothness[i],
+                label=obs,
+                linestyle=styles[gridDict[obs]][0],
+                marker=styles[gridDict[obs]][1],
+                color=colors[i],
+            )
 
             obs_legend_list.append(temp)
 
         # Handle legend for grid points
         grid_legend_list = list()
         for key in styles:
-            temp, = plt.plot(-1, color='gray',
-                             linestyle=styles[key][0], marker=styles[key][1], label=key)
+            (temp,) = plt.plot(
+                -1,
+                color="gray",
+                linestyle=styles[key][0],
+                marker=styles[key][1],
+                label=key,
+            )
             grid_legend_list.append(temp)
 
         ax = plt.gca()
-        grid_legend = ax.legend(handles=grid_legend_list, bbox_to_anchor=(1.4, 0.5
-                                                                          ), loc='center left')
-        obs_legend = ax.legend(handles=obs_legend_list,
-                               bbox_to_anchor=(1.04, 0.5), loc='center left')
+        grid_legend = ax.legend(
+            handles=grid_legend_list, bbox_to_anchor=(1.4, 0.5), loc="center left"
+        )
+        obs_legend = ax.legend(
+            handles=obs_legend_list, bbox_to_anchor=(1.04, 0.5), loc="center left"
+        )
 
         ax.add_artist(grid_legend)
 
-    elif (distribution == 'sorted'):
+    elif distribution == "sorted":
         # plt.gca().set_prop_cycle(plt.cycler('color', c1.colors))
         obs_legend_list = list()
         for i in range(0, len(obsids)):
             obs = obsids[i]
-            temp, = plt.plot(
-                ant, smoothness[i], alpha=0.7, label=obs, color=colors[i])
+            (temp,) = plt.plot(
+                ant, smoothness[i], alpha=0.7, label=obs, color=colors[i]
+            )
 
             obs_legend_list.append(temp)
 
         ax = plt.gca()
-        obs_legend = ax.legend(handles=obs_legend_list,
-                               bbox_to_anchor=(1.04, 0.5), loc='center left')
+        obs_legend = ax.legend(
+            handles=obs_legend_list, bbox_to_anchor=(1.04, 0.5), loc="center left"
+        )
 
         ax.add_artist(obs_legend)
 
     ax = plt.gca()
-    plt.xlabel('Antenna number')
-    plt.ylabel('Smoothness')
+    plt.xlabel("Antenna number")
+    plt.ylabel("Smoothness")
     plt.xticks(np.linspace(0, 127, 128), minor=True)
     plt.grid()
-    plt.grid(which='minor', alpha=0.5)
+    plt.grid(which="minor", alpha=0.5)
     plt.ylim(0.95 * np.nanmin(smoothness), 1.05 * np.nanmax(smoothness))
     bbox_artists = [obs_legend]
-    if (distribution == 'grid'):
+    if distribution == "grid":
         bbox_artists.append(grid_legend)
 
-    plt.savefig(smoothDir + '/' + 'all_obs_' + pol + '_linear.pdf',
-                bbox_extra_artists=(bbox_artists), bbox_inches='tight')
+    plt.savefig(
+        smoothDir + "/" + "all_obs_" + pol + "_linear.pdf",
+        bbox_extra_artists=(bbox_artists),
+        bbox_inches="tight",
+    )
     plt.clf()
 
 
@@ -161,7 +191,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDi
     x = np.linspace(0, 3073, 3072)
     ant = np.linspace(0, 127, 128)
     # interps = ['zero', 'linear', 'cspline']
-    interps = ['zero', 'linear']
+    interps = ["zero", "linear"]
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
     for i in tqdm(range(0, len(obsids))):
@@ -182,7 +212,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDi
                 yimag = cal.gain_array[0, j, :, 0].imag.copy()
 
                 # Skip flagged antennas
-                if ((np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0)):
+                if (np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0):
                     xxSmoothness.append(np.nan)
                     yySmoothness.append(np.nan)
                     continue
@@ -207,7 +237,7 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDi
                 # print(np.all(yimag == 0), sum(yimag))
                 # print(np.any(yimag == np.nan))
                 # print(yf)
-                smooth = np.average(abs(yf[1:int(3072/2)])/abs(yf[0]))
+                smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
 
                 # if (interp_type == 'linear' and j == 126):
                 #     # smooth = np.average(abs(yf[100:-100])/abs(yf[0]))
@@ -238,61 +268,77 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDi
                 yimag1 = interpChoices(x, yimag1, interp_type)
                 y1 = yreal1 + 1.0j * yimag1
                 yf1 = np.fft.fft(y1)
-                smooth1 = np.average(abs(yf1[1:int(3072/2)])/abs(yf1[0]))
+                smooth1 = np.average(abs(yf1[1 : int(3072 / 2)]) / abs(yf1[0]))
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAll.append(xxSmoothness)
             yySmoothnessAll.append(yySmoothness)
 
-            if (interp_type == 'linear'):
+            if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)
                 allObsYYSmoothness.append(yySmoothness)
 
             # Save figure for particular interp_type
-            plt.plot(ant, xxSmoothness, label="XX", color='blue')
-            plt.plot(ant, yySmoothness, label="YY", color='red')
+            plt.plot(ant, xxSmoothness, label="XX", color="blue")
+            plt.plot(ant, yySmoothness, label="YY", color="red")
             plt.xlabel("Antenna number")
             plt.ylabel("Smoothness")
             plt.title(obs + " " + interp_type)
             plt.legend()
             plt.xticks(np.linspace(0, 127, 128), minor=True)
             plt.grid()
-            plt.grid(which='minor', alpha=0.5)
-            plt.savefig(smoothDir + '/' + str(obs) +
-                        "_" + interp_type + ".pdf")
+            plt.grid(which="minor", alpha=0.5)
+            plt.savefig(smoothDir + "/" + str(obs) + "_" + interp_type + ".pdf")
             plt.clf()
 
         # Save figure for all interp types
         xMax = np.nanmax(xxSmoothnessAll)
         yMax = np.nanmax(yySmoothnessAll)
-        ls = ['solid', 'dashed', 'dotted']
-        interp_label = ['zero', 'linear', 'cspline']
+        ls = ["solid", "dashed", "dotted"]
+        interp_label = ["zero", "linear", "cspline"]
         legend_lines = list()
         for n in range(0, len(interps)):
-            plt.plot(ant, xxSmoothnessAll[n], color='blue', linestyle=ls[n])
-            plt.plot(ant, yySmoothnessAll[n], color='red', linestyle=ls[n])
+            plt.plot(ant, xxSmoothnessAll[n], color="blue", linestyle=ls[n])
+            plt.plot(ant, yySmoothnessAll[n], color="red", linestyle=ls[n])
             ax = plt.gca()
-            temp, = ax.plot(0, -1, color='grey',
-                            linestyle=ls[n], label=interp_label[n])
+            (temp,) = ax.plot(
+                0, -1, color="grey", linestyle=ls[n], label=interp_label[n]
+            )
             legend_lines.append(temp)
 
-        l4, = ax.plot(0, -1, color='blue', label='XX')
-        l5, = ax.plot(0, -1, color='red', label='YY')
-        first_legend = ax.legend(handles=legend_lines, loc='upper right')
+        (l4,) = ax.plot(0, -1, color="blue", label="XX")
+        (l5,) = ax.plot(0, -1, color="red", label="YY")
+        first_legend = ax.legend(handles=legend_lines, loc="upper right")
         ax.add_artist(first_legend)
-        ax.legend(handles=[l4, l5], loc='upper left')
+        ax.legend(handles=[l4, l5], loc="upper left")
         plt.xlabel("Antenna number")
         plt.ylabel("Smoothness")
         plt.ylim(0, 1.15 * np.max((xMax, yMax)))
         plt.title(obs)
         plt.xticks(np.linspace(0, 127, 128), minor=True)
         plt.grid()
-        plt.grid(which='minor', alpha=0.5)
-        plt.savefig(smoothDir + '/' + str(obs) + "_all.pdf")
+        plt.grid(which="minor", alpha=0.5)
+        plt.savefig(smoothDir + "/" + str(obs) + "_all.pdf")
         plt.clf()
 
     # Save figure for all obsids XX
-    plotSmoothnessAllObs(obsids, ant, allObsXXSmoothness,
-                         smoothDir, distribution, 'xx', gridDict, uniqueDict)
-    plotSmoothnessAllObs(obsids, ant, allObsYYSmoothness,
-                         smoothDir, distribution, 'yy', gridDict, uniqueDict)
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXSmoothness,
+        smoothDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+    )
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYSmoothness,
+        smoothDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+    )

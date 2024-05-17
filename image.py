@@ -1,12 +1,14 @@
 import os
+import re
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-import re
 
 
 def getRMS(filename):
-    with open(filename, 'r') as file:
-        data = file.read().replace('\n', ' ')
+    with open(filename, "r") as file:
+        data = file.read().replace("\n", " ")
         file.close()
 
     m = re.search("RMS\s+(.*?)\s+Jy/beam", data)
@@ -15,8 +17,8 @@ def getRMS(filename):
 
 
 def getMax(filename):
-    with open(filename, 'r') as file:
-        data = file.read().replace('\n', ' ')
+    with open(filename, "r") as file:
+        data = file.read().replace("\n", " ")
         file.close()
 
     m = re.search("Max\s+(.*?)\s+Jy/beam", data)
@@ -25,8 +27,8 @@ def getMax(filename):
 
 
 def getMin(filename):
-    with open(filename, 'r') as file:
-        data = file.read().replace('\n', ' ')
+    with open(filename, "r") as file:
+        data = file.read().replace("\n", " ")
         file.close()
 
     m = re.search("Min\s+(.*?)\s+Jy/beam", data)
@@ -34,73 +36,128 @@ def getMin(filename):
     return float(m.group(1))
 
 
-def getRMSVec(directory, obsids, distribution):
+def gridPlot(obsids, statVec, gridDict, uniqueDict):
+    # Create many combination of line and marker styles
+    linestyles = ["solid", "dashed", "dotted", "dashdot"]
+    marker = [
+        "d",
+        ".",
+        "s",
+        "o",
+        "*",
+        "x",
+    ]
+    styles = {}
+
+    # For some particular grid number, it will have it's own unique combination
+    for i, key in enumerate(uniqueDict):
+        styles[key] = [
+            linestyles[i % len(linestyles)],
+            marker[int(i // len(linestyles))],
+        ]
+
+    obs_legend_list = list()
+    # Plot line for each unique grid value
+    for key in uniqueDict:
+        obsWithSameKey = [k for k, v in gridDict.items() if v == key]
+        # Grab index of obs in obsids
+        tempIdx = []
+        for j, findThisObs in enumerate(obsWithSameKey):
+            for i, obs in enumerate(obsids):
+                if obs == findThisObs:
+                    tempIdx.append(i)
+
+        (temp,) = plt.plot(
+            obsWithSameKey,
+            statVec[tempIdx[:]],
+            linestyle=styles[key][0],
+            marker=styles[key][1],
+            label=key,
+        )
+        obs_legend_list.append(temp)
+
+    ax = plt.gca()
+    obs_legend = ax.legend(
+        handles=obs_legend_list, bbox_to_anchor=(1.04, 0.5), loc="center left"
+    )
+
+    return obs_legend
+
+
+def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict):
     rmsVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
-            obsid = file.split('_')[0]
+            obsid = file.split("_")[0]
 
-            if (obsid not in obsids):
+            if obsid not in obsids:
                 continue
 
             rms = getRMS(file)
 
             rmsVec[obsids.index(obsid)] = rms
 
-    if (distribution == 'cyclic'):
-        pass
-    elif (distribution == 'sorted'):
+    if distribution == "grid":
+        obs_legend = gridPlot(obsids, rmsVec, gridDict, uniqueDict)
+    elif distribution == "sorted":
         plt.plot(obsids, rmsVec)
 
     plt.xticks(rotation=90)
     plt.ylabel("RMS (Jy/beam)")
-    plt.savefig("obs_rms.pdf", bbox_inches='tight')
+    if distribution == "grid":
+        plt.savefig(
+            "obs_rms.pdf",
+            bbox_extra_artists=([obs_legend]),
+            bbox_inches="tight",
+        )
+    elif distribution == "sorted":
+        plt.savefig("obs_rms.pdf", bbox_inches="tight")
     plt.clf()
 
 
-def getMaxVec(directory, obsids, distribution):
+def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict):
     maxVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
-            obsid = file.split('_')[0]
-            if (obsid not in obsids):
+            obsid = file.split("_")[0]
+            if obsid not in obsids:
                 continue
             max = getMax(file)
 
             maxVec[obsids.index(obsid)] = max
 
-    if (distribution == 'cyclic'):
-        pass
-    elif (distribution == 'sorted'):
+    if distribution == "grid":
+        gridPlot(obsids, maxVec, gridDict, uniqueDict)
+    elif distribution == "sorted":
         plt.plot(obsids, maxVec)
     plt.xticks(rotation=90)
     plt.ylabel("Maximum (Jy/beam)")
-    plt.savefig("obs_max.pdf", bbox_inches='tight')
+    plt.savefig("obs_max.pdf", bbox_inches="tight")
     plt.clf()
 
 
-def getDRVec(directory, obsids, distribution):
+def getDRVec(directory, obsids, distribution, gridDict, uniqueDict):
     drVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
         if os.path.isfile(file) and file.endswith(".tsv"):
-            obsid = file.split('_')[0]
-            if (obsid not in obsids):
+            obsid = file.split("_")[0]
+            if obsid not in obsids:
                 continue
             max = getMax(file)
             rms = getRMS(file)
-            dr = max/rms
+            dr = max / rms
 
             drVec[obsids.index(obsid)] = dr
 
-    if (distribution == 'cyclic'):
-        pass
-    elif (distribution == 'sorted'):
+    if distribution == "grid":
+        gridPlot(obsids, drVec, gridDict, uniqueDict)
+    elif distribution == "sorted":
         plt.plot(obsids, drVec)
 
     plt.xticks(rotation=90)
     plt.ylabel("Dynamic Range (max/rms)")
-    plt.savefig("obs_dynamic_range.pdf", bbox_inches='tight')
+    plt.savefig("obs_dynamic_range.pdf", bbox_inches="tight")
     plt.clf()
