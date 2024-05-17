@@ -8,6 +8,14 @@ from tqdm import tqdm
 
 
 def calVar(obsids, varDir, solDir):
+    """Function for getting variance of gain amplitude calibration solutions through mwa_qa
+    obsids: list
+        List of observation ids
+    varDir: string
+        Path to save results to
+    solDir: string
+        Path to directory containing solutions/metafits
+    """
 
     for i in tqdm(range(0, len(obsids))):
         obsid = obsids[i]
@@ -35,6 +43,14 @@ def calVar(obsids, varDir, solDir):
 
 
 def calRMS(obsids, rmsDir, solDir):
+    """Function for getting rms of gain amplitude calibration solutions through mwa_qa
+    obsids: list
+        List of observation ids
+    varDir: string
+        Path to save results to
+    solDir: string
+        Path to directory containing solutions/metafits
+    """
     for i in tqdm(range(0, len(obsids))):
         metPath = solDir + "/" + obsids[i] + "_solutions_cal_metrics.json"
         with open(metPath) as f:
@@ -57,22 +73,50 @@ def nan_helper(y):
     # https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
     """Helper to handle indices and logical indices of NaNs.
 
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-          to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    Parameters
+    ----------
+    y: numpy array
+        1d numpy array with possible NaNs
+
+    Returns
+    -------
+    nans: numpy array
+        logical indices of NaNs
+    index: numpy array
+        a function, with signature indices= index(logical_indices),
+        to convert logical indices of NaNs to 'equivalent' indices
+
+    Example
+    -------
+    >>> # linear interpolation of NaNs
+    >>> nans, x= nan_helper(y)
+    >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+
+    -------
     """
 
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 
 def interpChoices(x, y, interp_type):
+    """Function for interpolating with different styles
+
+    Parameters
+    ----------
+    x: list
+        x axis
+    y: list
+        y axis
+    interp_type: string
+        Choice of interpolation
+
+    Returns
+    -------
+    y: list
+        Interpolated function
+
+    -------
+    """
     if interp_type == "linear":
         nans, x = nan_helper(y)
         y[nans] = np.interp(x(nans), x(~nans), y[~nans])
@@ -94,6 +138,30 @@ def interpChoices(x, y, interp_type):
 def plotSmoothnessAllObs(
     obsids, ant, smoothness, smoothDir, distribution, pol, gridDict, uniqueDict
 ):
+    """Function for plotting the smoothness metric
+    obsids: list
+        List of observation ids
+    ant: list
+        List of antenna numbers
+    smoothness: list[list]
+        List of list of all smoothness values across all antennas for all obs
+    smoothDir: string
+        Path to save results to
+    distribution: string
+        How the obs are sorted
+    pol: string
+        String for naming files properly
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
     colors = plt.cm.jet(np.linspace(0, 1, len(obsids)))
     if distribution == "grid":
         linestyles = ["solid", "dashed", "dotted", "dashdot"]
@@ -188,6 +256,25 @@ def plotSmoothnessAllObs(
 
 
 def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDict):
+    """Function for calculating smoothness of calibration gain amplitudes for all obs
+    obsids: list
+        List of observation ids
+    smoothDir: string
+        Path to save results to
+    distribution: string
+        How the obs are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
+
     x = np.linspace(0, 3073, 3072)
     ant = np.linspace(0, 127, 128)
     # interps = ['zero', 'linear', 'cspline']

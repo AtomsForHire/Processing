@@ -7,6 +7,20 @@ import numpy as np
 
 
 def getRMS(filename):
+    """Function to get RMS from carta stats file
+
+    Parameters
+    ----------
+    filename: string
+        name of tsv file
+
+    Returns
+    -------
+    rms: float
+        rms of observation
+
+    -------
+    """
     with open(filename, "r") as file:
         data = file.read().replace("\n", " ")
         file.close()
@@ -17,6 +31,20 @@ def getRMS(filename):
 
 
 def getMax(filename):
+    """Function to get max from carta stats file
+
+    Parameters
+    ----------
+    filename: string
+        name of tsv file
+
+    Returns
+    -------
+    max: float
+        max of observation
+
+    -------
+    """
     with open(filename, "r") as file:
         data = file.read().replace("\n", " ")
         file.close()
@@ -27,6 +55,20 @@ def getMax(filename):
 
 
 def getMin(filename):
+    """Function to get min from carta stats file
+
+    Parameters
+    ----------
+    filename: string
+        name of tsv file
+
+    Returns
+    -------
+    min: float
+        min of observation
+
+    -------
+    """
     with open(filename, "r") as file:
         data = file.read().replace("\n", " ")
         file.close()
@@ -37,6 +79,26 @@ def getMin(filename):
 
 
 def gridPlot(obsids, statVec, gridDict, uniqueDict):
+    """Function for plotting image statistics group by grid number
+
+    Parameters
+    ----------
+    obsids: list
+        List of observations
+    statVec: array
+        Array containg whatever statistic for each observation (e.g. rms, max, etc.)
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
+
     # Create many combination of line and marker styles
     linestyles = ["solid", "dashed", "dotted", "dashdot"]
     marker = [
@@ -85,6 +147,27 @@ def gridPlot(obsids, statVec, gridDict, uniqueDict):
 
 
 def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict):
+    """Function for getting list of rms values per observation
+
+    Parameters
+    ----------
+    directory: string
+        Path to where the carta statistics files are
+    obsids: list
+        List of observation ids
+    distribution: string
+        How the obsids are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
     rmsVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
@@ -117,6 +200,27 @@ def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict):
 
 
 def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict):
+    """Function for getting list of max values per observation
+
+    Parameters
+    ----------
+    directory: string
+        Path to where the carta statistics files are
+    obsids: list
+        List of observation ids
+    distribution: string
+        How the obsids are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
     maxVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):
@@ -139,6 +243,27 @@ def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict):
 
 
 def getDRVec(directory, obsids, distribution, gridDict, uniqueDict):
+    """Function for getting list of dynamic range values per observation
+
+    Parameters
+    ----------
+    directory: string
+        Path to where the carta statistics files are
+    obsids: list
+        List of observation ids
+    distribution: string
+        How the obsids are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
     drVec = np.zeros(len(obsids))
 
     for file in os.listdir(directory):

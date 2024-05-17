@@ -25,6 +25,19 @@ class bcolors:
 
 
 def getDirs(filename):
+    """Function for reading in config yaml and return settings
+
+    Parameters
+    ----------
+    filename: string
+        Name of the yaml file
+
+    Returns
+    -------
+    All settings
+
+    -------
+    """
 
     with open(filename) as f:
         temp = yaml.safe_load(f)
@@ -72,6 +85,22 @@ def getDirs(filename):
 
 
 def getObsVec(directory, distribution):
+    """Function for obtaining list of observations
+
+    Parameters
+    ----------
+    directory: string
+        Directory of solutions/metafits files
+    distribution: string
+        How the obsids should be ordered, at the moment only sorted works
+
+    Returns
+    -------
+    result: list
+        List of observation ids
+
+    -------
+    """
     point1 = list()
     point2 = list()
     point3 = list()
@@ -101,6 +130,22 @@ def getObsVec(directory, distribution):
 
 
 def getGridNum(obsids, solDir):
+    """Function for getting observation's grid numbers
+
+    Parameters
+    ----------
+    obsids: list
+        List of observation ids
+    solDir: string
+        Path to directory containing metafits files
+
+    Returns
+    -------
+    gridDict: dictionary
+        Dictionary where keys are obsids and values are their grid number
+
+    -------
+    """
     gridDict = {}
     for obs in obsids:
         with fits.open(solDir + "/" + str(obs) + ".metafits") as hdu:
