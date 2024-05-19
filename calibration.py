@@ -429,3 +429,179 @@ def calAmpSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDi
         gridDict,
         uniqueDict,
     )
+
+
+def calPhaseSmoothness(obsids, solDir, smoothDir, distribution, gridDict, uniqueDict):
+    """Function for calculating smoothness of calibration phase amplitudes for all obs
+    obsids: list
+        List of observation ids
+    smoothDir: string
+        Path to save results to
+    distribution: string
+        How the obs are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+
+    Returns
+    -------
+    None
+
+    -------
+    """
+
+    x = np.linspace(0, 3073, 3072)
+    ant = np.linspace(0, 127, 128)
+    # interps = ['zero', 'linear', 'cspline']
+    interps = ["zero", "linear"]
+    allObsXXSmoothness = list()
+    allObsYYSmoothness = list()
+    for i in tqdm(range(0, len(obsids))):
+        obs = obsids[i]
+        filename = solDir + "/" + obs + "_solutions.fits"
+        cal = read_calfits.CalFits(filename)
+
+        xxSmoothnessAll = list()
+        yySmoothnessAll = list()
+        for interp_type in interps:
+            xxSmoothness = list()
+            yySmoothness = list()
+            # Loop over antennas
+            for j in range(0, len(cal.phases[0, :, 0, 0])):
+                # Extract amplitudes for XX pol
+                # old = cal.gain_array[0, j, :, 0].copy()
+                yreal = cal.phases[0, j, :, 0].real.copy()
+                yimag = cal.phases[0, j, :, 0].imag.copy()
+
+                # Skip flagged antennas
+                if (np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0):
+                    xxSmoothness.append(np.nan)
+                    yySmoothness.append(np.nan)
+                    continue
+
+                yreal = interpChoices(x, yreal, interp_type)
+                yimag = interpChoices(x, yimag, interp_type)
+                y = yreal + 1.0j * yimag
+                yf = np.fft.fft(y)
+                # plt.plot(yreal, label="real", alpha=0.5)
+                # plt.plot(yimag, label="imag", alpha=0.5)
+                # if (np.nansum(yreal) == sum(yreal)):
+                #     print("TRUE")
+                # if (np.sum(yreal) == np.nansum(yreal)):
+                #     print("TRUE2")
+                # if (sum(yreal) == 0.0):
+                #     print("TRUE3")
+                # print(j)
+                # print(np.all(yreal == 0.0), sum(yreal))
+                # print(np.any(yreal == np.nan))
+                # print(np.any(yreal == float('nan')))
+                # print(yreal[np.where(yreal != 0, True, False)])
+                # print(np.all(yimag == 0), sum(yimag))
+                # print(np.any(yimag == np.nan))
+                # print(yf)
+                smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
+
+                # if (interp_type == 'linear' and j == 126):
+                #     # smooth = np.average(abs(yf[100:-100])/abs(yf[0]))
+                #     fig, (ax1, ax2, ax3) = plt.subplots(3)
+                #     # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
+                #     ax1.plot(old.real, 'r.', alpha=0.5,
+                #              markersize=0.75, label='old')
+                #     ax1.plot(yreal, linewidth=0.5, label='interp')
+                #     ax1.set_title(obs + " amps solutions real")
+                #     ax2.plot(old.imag, 'r.', alpha=0.5,
+                #              markersize=0.75, label='old')
+                #     ax2.plot(yimag, linewidth=0.5, label='interp')
+                #     ax2.set_title(obs + " amps solutions imag")
+                #     # ax1.set_ylim(0, 7)
+                #     ax1.legend()
+                #     ax3.plot(abs(yf))
+                #     ax3.set_title(
+                #         f'Absolute value of fourier transform {smooth}')
+                #     # ax4.plot(yf.imag)
+                #     # ax4.set_title('Fourier transform real')
+                #     plt.show()
+                xxSmoothness.append(smooth)
+
+                # Samething for YY pol
+                yreal1 = cal.phases[0, j, :, 3].real
+                yimag1 = cal.phases[0, j, :, 3].imag
+                yreal1 = interpChoices(x, yreal1, interp_type)
+                yimag1 = interpChoices(x, yimag1, interp_type)
+                y1 = yreal1 + 1.0j * yimag1
+                yf1 = np.fft.fft(y1)
+                smooth1 = np.average(abs(yf1[1 : int(3072 / 2)]) / abs(yf1[0]))
+                yySmoothness.append(smooth1)
+
+            xxSmoothnessAll.append(xxSmoothness)
+            yySmoothnessAll.append(yySmoothness)
+
+            if interp_type == "linear":
+                allObsXXSmoothness.append(xxSmoothness)
+                allObsYYSmoothness.append(yySmoothness)
+
+            # Save figure for particular interp_type
+            plt.plot(ant, xxSmoothness, label="XX", color="blue")
+            plt.plot(ant, yySmoothness, label="YY", color="red")
+            plt.xlabel("Antenna number")
+            plt.ylabel("Smoothness")
+            plt.title(obs + " " + interp_type)
+            plt.legend()
+            plt.xticks(np.linspace(0, 127, 128), minor=True)
+            plt.grid()
+            plt.grid(which="minor", alpha=0.5)
+            plt.savefig(smoothDir + "/" + str(obs) + "_" + interp_type + ".pdf")
+            plt.clf()
+
+        # Save figure for all interp types
+        xMax = np.nanmax(xxSmoothnessAll)
+        yMax = np.nanmax(yySmoothnessAll)
+        ls = ["solid", "dashed", "dotted"]
+        interp_label = ["zero", "linear", "cspline"]
+        legend_lines = list()
+        for n in range(0, len(interps)):
+            plt.plot(ant, xxSmoothnessAll[n], color="blue", linestyle=ls[n])
+            plt.plot(ant, yySmoothnessAll[n], color="red", linestyle=ls[n])
+            ax = plt.gca()
+            (temp,) = ax.plot(
+                0, -1, color="grey", linestyle=ls[n], label=interp_label[n]
+            )
+            legend_lines.append(temp)
+
+        (l4,) = ax.plot(0, -1, color="blue", label="XX")
+        (l5,) = ax.plot(0, -1, color="red", label="YY")
+        first_legend = ax.legend(handles=legend_lines, loc="upper right")
+        ax.add_artist(first_legend)
+        ax.legend(handles=[l4, l5], loc="upper left")
+        plt.xlabel("Antenna number")
+        plt.ylabel("Smoothness")
+        plt.ylim(0, 1.15 * np.max((xMax, yMax)))
+        plt.title(obs)
+        plt.xticks(np.linspace(0, 127, 128), minor=True)
+        plt.grid()
+        plt.grid(which="minor", alpha=0.5)
+        plt.savefig(smoothDir + "/" + str(obs) + "_all.pdf")
+        plt.clf()
+
+    # Save figure for all obsids XX
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXSmoothness,
+        smoothDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+    )
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYSmoothness,
+        smoothDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+    )

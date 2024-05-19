@@ -56,10 +56,15 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE var_dir IN CONFIG FILE")
 
-        if "smooth_dir" in temp.keys():
-            smoothDir = temp["smooth_dir"]
+        if "smooth_dir_amp" in temp.keys():
+            smoothDirAmps = temp["smooth_dir_amp"]
         else:
-            sys.exit("PLEASE INCLUDE smooth_dir IN CONFIG FILE")
+            sys.exit("PLEASE INCLUDE smooth_dir_amp IN CONFIG FILE")
+
+        if "smooth_dir_phase" in temp.keys():
+            smoothDirPhase = temp["smooth_dir_phase"]
+        else:
+            sys.exit("PLEASE INCLUDE smooth_dir_phase IN CONFIG FILE")
 
         if "sol_dir" in temp.keys():
             solDir = temp["sol_dir"]
@@ -81,7 +86,17 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE exclude IN CONFIG FILE")
 
-    return statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution
+    return (
+        statsDir,
+        rmsDir,
+        varDir,
+        smoothDirAmps,
+        smoothDirPhase,
+        solDir,
+        stats,
+        excludeList,
+        distribution,
+    )
 
 
 def getObsVec(directory, distribution):
@@ -159,13 +174,22 @@ if __name__ == "__main__":
     # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     np.set_printoptions(suppress=True, linewidth=np.nan)
     config = sys.argv[1]
-    statsDir, rmsDir, varDir, smoothDir, solDir, stats, excludeList, distribution = (
-        getDirs(config)
-    )
+    (
+        statsDir,
+        rmsDir,
+        varDir,
+        smoothDirAmps,
+        smoothDirPhase,
+        solDir,
+        stats,
+        excludeList,
+        distribution,
+    ) = getDirs(config)
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
     Path(varDir).mkdir(parents=True, exist_ok=True)
-    Path(smoothDir).mkdir(parents=True, exist_ok=True)
+    Path(smoothDirAmps).mkdir(parents=True, exist_ok=True)
+    Path(smoothDirPhase).mkdir(parents=True, exist_ok=True)
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
@@ -212,5 +236,10 @@ if __name__ == "__main__":
 
         print("AMP SMOOTHNESS")
         calibration.calAmpSmoothness(
-            obsids, solDir, smoothDir, distribution, gridDict, uniqueDict
+            obsids, solDir, smoothDirAmps, distribution, gridDict, uniqueDict
+        )
+
+        print("PHASE SMOOTHNESS")
+        calibration.calPhaseSmoothness(
+            obsids, solDir, smoothDirPhase, distribution, gridDict, uniqueDict
         )
