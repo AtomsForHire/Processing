@@ -327,12 +327,15 @@ def calAmpSmoothness(
                         if j in debugTargetAnt:
                             print(filename)
                             print(cal.annames[j])
-                            plotDebug(old, yreal, yimag, yf, obs)
+                            plotDebug(old, yreal, yimag, y, yf, obs)
                     elif obs in debugTargetObs:
                         if j in debugTargetAnt:
+                            # print(filename, cal.annames[j])
+                            # plt.plot(abs(cal.gain_array[0, j, :, 0]))
+                            # plt.show()
                             print(filename)
                             print(cal.annames[j])
-                            plotDebug(old, yreal, yimag, yf, obs)
+                            plotDebug(old, yreal, yimag, y, yf, obs)
 
                 xxSmoothness.append(smooth)
 
@@ -451,10 +454,10 @@ def calPhaseSmoothness(
     """
 
     ant = np.linspace(0, 127, 128)
-    # interps = ['zero', 'linear', 'cspline']
     interps = ["zero", "linear"]
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
+    # Loop through observations
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
@@ -465,14 +468,17 @@ def calPhaseSmoothness(
 
         xxSmoothnessAll = list()
         yySmoothnessAll = list()
+        # Loop through interpolation types
         for interp_type in interps:
             xxSmoothness = list()
             yySmoothness = list()
+
             # Loop over antennas
             for j in range(0, len(cal.phases[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
-                old = cal.phases[0, j, :, 3].copy()
-                y = cal.phases[0, j, :, 3].copy()
+                # old for debugging purposes
+                old = cal.phases[0, j, :, 0].copy()
+                y = cal.phases[0, j, :, 0].copy()
 
                 # Skip flagged antennas
                 if np.nansum(y) == 0.0:
@@ -480,6 +486,7 @@ def calPhaseSmoothness(
                     yySmoothness.append(np.nan)
                     continue
 
+                # Interpolate phase solutions
                 y = interpChoices(x, y, interp_type)
                 yf = np.fft.fft(y)
                 smooth = np.average(abs(yf[1 : int(nFreq / 2)]) / abs(yf[0]))
@@ -489,12 +496,12 @@ def calPhaseSmoothness(
                         if j in debugTargetAnt:
                             print(filename)
                             print(cal.annames[j])
-                            plotDebug(old, y, 0, yf, obs)
+                            plotDebug(old, y, 0, y, yf, obs)
                     elif obs in debugTargetObs:
                         if j in debugTargetAnt:
                             print(filename)
                             print(cal.annames[j])
-                            plotDebug(old, y, 0, yf, obs)
+                            plotDebug(old, y, 0, y, yf, obs)
 
                 xxSmoothness.append(smooth)
 
@@ -580,7 +587,7 @@ def calPhaseSmoothness(
     )
 
 
-def plotDebug(old, yreal, yimag, yf, obs):
+def plotDebug(old, yreal, yimag, y, yf, obs):
     """Function to use when debugging the smoothness parameter
 
     Parameters
@@ -602,34 +609,31 @@ def plotDebug(old, yreal, yimag, yf, obs):
 
     -------
     """
-    if yimag != 0:
+    if type(yimag) is not int:
         smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
-        fig, (ax1, ax2, ax3) = plt.subplots(3)
-        # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
         ax1.plot(old.real, "r.", alpha=0.5, markersize=0.75, label="old")
         ax1.plot(yreal, linewidth=0.5, label="interp")
         ax1.set_title(obs + " amps solutions real")
+        ax1.legend()
+
         ax2.plot(old.imag, "r.", alpha=0.5, markersize=0.75, label="old")
         ax2.plot(yimag, linewidth=0.5, label="interp")
         ax2.set_title(obs + " amps solutions imag")
-        # ax1.set_ylim(0, 7)
-        ax1.legend()
-        ax3.plot(abs(yf))
-        ax3.set_title(f"Absolute value of fourier transform {smooth}")
-        # ax4.plot(yf.imag)
-        # ax4.set_title('Fourier transform real')
+
+        ax3.plot(abs(y), linewidth=0.5)
+        ax3.set_title(obs + " absolute value")
+
+        ax4.plot(abs(yf))
+        ax4.set_title(f"Absolute value of fourier transform {smooth}")
         plt.show()
     else:
         smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
         fig, (ax1, ax2) = plt.subplots(2)
-        # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
         ax1.plot(old, "r.", alpha=0.5, markersize=0.75, label="old")
         ax1.plot(yreal, linewidth=0.5, label="interp")
-        ax1.set_title(obs + " amps solutions real")
-        # ax1.set_ylim(0, 7)
+        ax1.set_title(obs + " phase solutions")
         ax1.legend()
         ax2.plot(abs(yf))
         ax2.set_title(f"Absolute value of fourier transform {smooth}")
-        # ax4.plot(yf.imag)
-        # ax4.set_title('Fourier transform real')
         plt.show()
