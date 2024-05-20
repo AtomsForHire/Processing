@@ -86,6 +86,21 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE exclude IN CONFIG FILE")
 
+        if "debug" in temp.keys():
+            debug = temp["debug"]
+        else:
+            sys.exit("PLEASE INCLUDE debug IN CONFIG FILE")
+
+        if "debug_obs" in temp.keys():
+            debugObsList = temp["debug_obs"]
+        else:
+            sys.exit("PLEASE INCLUDE debug_obs IN CONFIG FILE")
+
+        if "debug_ant" in temp.keys():
+            debugAntList = temp["debug_ant"]
+        else:
+            sys.exit("PLEASE INCLUDE debug_ant IN CONFIG FILE")
+
     return (
         statsDir,
         rmsDir,
@@ -96,6 +111,9 @@ def getDirs(filename):
         stats,
         excludeList,
         distribution,
+        debug,
+        debugObsList,
+        debugAntList,
     )
 
 
@@ -184,6 +202,9 @@ if __name__ == "__main__":
         stats,
         excludeList,
         distribution,
+        debug,
+        debugObsList,
+        debugAntList,
     ) = getDirs(config)
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
@@ -234,12 +255,20 @@ if __name__ == "__main__":
         # print("Calibration RMS")
         # calibration.calRMS(obsids, rmsDir, solDir)
 
-        print("AMP SMOOTHNESS")
-        calibration.calAmpSmoothness(
-            obsids, solDir, smoothDirAmps, distribution, gridDict, uniqueDict
-        )
+        # print("AMP SMOOTHNESS")
+        # calibration.calAmpSmoothness(
+        #     obsids, solDir, smoothDirAmps, distribution, gridDict, uniqueDict
+        # )
 
         print("PHASE SMOOTHNESS")
         calibration.calPhaseSmoothness(
-            obsids, solDir, smoothDirPhase, distribution, gridDict, uniqueDict
+            obsids,
+            solDir,
+            smoothDirPhase,
+            distribution,
+            gridDict,
+            uniqueDict,
+            debug,
+            debugObsList,
+            debugAntList,
         )
