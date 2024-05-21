@@ -101,6 +101,11 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE debug_ant IN CONFIG FILE")
 
+        if "norm" in temp.keys():
+            norm = temp["norm"]
+        else:
+            sys.exit("PLEASE INCLUDE norm IN CONFIG FILE")
+
     return (
         statsDir,
         rmsDir,
@@ -114,6 +119,7 @@ def getDirs(filename):
         debug,
         debugObsList,
         debugAntList,
+        norm,
     )
 
 
@@ -189,8 +195,8 @@ def getGridNum(obsids, solDir):
 
 
 if __name__ == "__main__":
-    # np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
-    np.set_printoptions(suppress=True, linewidth=np.nan)
+    np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
+    # np.set_printoptions(suppress=True, linewidth=np.nan)
     config = sys.argv[1]
     (
         statsDir,
@@ -205,6 +211,7 @@ if __name__ == "__main__":
         debug,
         debugObsList,
         debugAntList,
+        norm,
     ) = getDirs(config)
 
     Path(rmsDir).mkdir(parents=True, exist_ok=True)
@@ -266,6 +273,7 @@ if __name__ == "__main__":
             debug,
             debugObsList,
             debugAntList,
+            norm,
         )
 
         print("PHASE SMOOTHNESS")
@@ -279,4 +287,5 @@ if __name__ == "__main__":
             debug,
             debugObsList,
             debugAntList,
+            norm,
         )

@@ -5,11 +5,15 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from mwa_qa import cal_metrics, read_calfits
+from numpy.polynomial import Polynomial
 from tqdm import tqdm
 
 
 def calVar(obsids, varDir, solDir):
     """Function for getting variance of gain amplitude calibration solutions through mwa_qa
+
+    Parameters
+    ----------
     obsids: list
         List of observation ids
     varDir: string
@@ -45,6 +49,9 @@ def calVar(obsids, varDir, solDir):
 
 def calRMS(obsids, rmsDir, solDir):
     """Function for getting rms of gain amplitude calibration solutions through mwa_qa
+
+    Parameters
+    ----------
     obsids: list
         List of observation ids
     varDir: string
@@ -140,6 +147,9 @@ def plotSmoothnessAllObs(
     obsids, ant, smoothness, smoothDir, distribution, pol, gridDict, uniqueDict
 ):
     """Function for plotting the smoothness metric
+
+    Parameters
+    ----------
     obsids: list
         List of observation ids
     ant: list
@@ -266,8 +276,12 @@ def calAmpSmoothness(
     debug,
     debugTargetObs,
     debugTargetAnt,
+    normalise,
 ):
     """Function for calculating smoothness of calibration gain amplitudes for all obs
+
+    Parameters
+    ----------
     obsids: list
         List of observation ids
     smoothDir: string
@@ -278,6 +292,8 @@ def calAmpSmoothness(
         Dictionary where keys are obs ids and values are their grid number
     uniqueDict: dictionary
         Dictionary of unique grid numbers and how often they occur
+    normalise: bool
+        True or False, enable or disable normalisation
 
     Returns
     -------
@@ -294,7 +310,7 @@ def calAmpSmoothness(
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
-        cal = read_calfits.CalFits(filename, norm=True)
+        cal = read_calfits.CalFits(filename, norm=normalise)
         nFreq = cal.Nchan
         x = np.linspace(0, nFreq - 1, nFreq)
 
@@ -321,6 +337,9 @@ def calAmpSmoothness(
                 y = yreal + 1.0j * yimag
                 yf = np.fft.fft(y)
                 smooth = np.average(abs(yf[1 : int(nFreq / 2)]) / abs(yf[0]))
+                if normalise and j == 127:
+                    smooth = 0
+
                 if interp_type == "linear" and debug:
                     if debugTargetObs is None:
                         if j in debugTargetAnt:
@@ -346,6 +365,8 @@ def calAmpSmoothness(
                 y1 = yreal1 + 1.0j * yimag1
                 yf1 = np.fft.fft(y1)
                 smooth1 = np.average(abs(yf1[1 : int(nFreq / 2)]) / abs(yf1[0]))
+                if normalise and j == 127:
+                    smooth1 = 0
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAll.append(xxSmoothness)
@@ -432,8 +453,12 @@ def calPhaseSmoothness(
     debug,
     debugTargetObs,
     debugTargetAnt,
+    normalise,
 ):
     """Function for calculating smoothness of calibration phase amplitudes for all obs
+
+    Parameters
+    ----------
     obsids: list
         List of observation ids
     smoothDir: string
@@ -444,6 +469,8 @@ def calPhaseSmoothness(
         Dictionary where keys are obs ids and values are their grid number
     uniqueDict: dictionary
         Dictionary of unique grid numbers and how often they occur
+    normalise: bool
+        True or False, enable or disable normalisation
 
     Returns
     -------
@@ -460,7 +487,7 @@ def calPhaseSmoothness(
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
-        cal = read_calfits.CalFits(filename, norm=True)
+        cal = read_calfits.CalFits(filename, norm=normalise)
 
         nFreq = cal.Nchan
         x = np.linspace(0, nFreq - 1, nFreq)
@@ -472,12 +499,14 @@ def calPhaseSmoothness(
             xxSmoothness = list()
             yySmoothness = list()
 
-            # Loop over antennas
+            # Loop over antennas (Except the last one which is the reference antenna)
             for j in range(0, len(cal.phases[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
                 # old for debugging purposes
                 old = cal.phases[0, j, :, 0].copy()
                 y = cal.phases[0, j, :, 0].copy()
+                # Normalise all angles to sit between [0, 360]
+                y = movePhases(y)
 
                 # Skip flagged antennas
                 if np.nansum(y) == 0.0:
@@ -487,8 +516,12 @@ def calPhaseSmoothness(
 
                 # Interpolate phase solutions
                 y = interpChoices(x, y, interp_type)
+                linearFit = Polynomial.fit(x, y, deg=1)
+
                 yf = np.fft.fft(y)
                 smooth = np.average(abs(yf[1 : int(nFreq / 2)]) / abs(yf[0]))
+                if normalise and j == 127:
+                    smooth = 0
 
                 if interp_type == "linear" and debug:
                     if debugTargetObs is None:
@@ -500,16 +533,25 @@ def calPhaseSmoothness(
                         if j in debugTargetAnt:
                             print(filename)
                             print(cal.annames[j])
-                            plotDebug(old, y, 0, y, yf, obs)
+                            plt.plot(y)
+                            xx, yy = linearFit.linspace()
+                            print(xx, yy)
+                            plt.plot(xx, yy)
+                            plt.show()
+                            # plotDebug(old, y, 0, y, yf, obs)
 
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
                 y1 = cal.phases[0, j, :, 3]
+                y1 = movePhases(y1)
 
                 y1 = interpChoices(x, y1, interp_type)
                 yf1 = np.fft.fft(y1)
                 smooth1 = np.average(abs(yf1[1 : int(nFreq / 2)]) / abs(yf1[0]))
+                if normalise and j == 127:
+                    smooth1 = 0
+
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAll.append(xxSmoothness)
@@ -584,6 +626,38 @@ def calPhaseSmoothness(
         gridDict,
         uniqueDict,
     )
+
+
+def movePhases(phases):
+    """Function to make phases not wrap
+
+    Parameters
+    ----------
+    phases: array
+        array of phases to process
+
+    Returns
+    -------
+    phases: array
+        modified phases
+    """
+
+    # BUG: NEED TO DEAL WITH FLAGGED FREQUENCY CHANNELS
+    prevAngle = phases[0]
+    for i in range(1, len(phases)):
+        currAngle = phases[i]
+        if np.isnan(currAngle):
+            continue
+
+        if currAngle - prevAngle > 180.0:
+            currAngle -= 360.0
+        if currAngle - prevAngle < -180.0:
+            currAngle += 360.0
+
+        prevAngle = currAngle
+        phases[i] = currAngle
+
+    return phases
 
 
 def plotDebug(old, yreal, yimag, y, yf, obs):
