@@ -294,8 +294,7 @@ def calAmpSmoothness(
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
-        cal = read_calfits.CalFits(filename)
-
+        cal = read_calfits.CalFits(filename, norm=True)
         nFreq = cal.Nchan
         x = np.linspace(0, nFreq - 1, nFreq)
 
@@ -461,7 +460,7 @@ def calPhaseSmoothness(
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
-        cal = read_calfits.CalFits(filename)
+        cal = read_calfits.CalFits(filename, norm=True)
 
         nFreq = cal.Nchan
         x = np.linspace(0, nFreq - 1, nFreq)
