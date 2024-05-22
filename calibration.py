@@ -332,41 +332,39 @@ def calAmpSmoothness(
                     yySmoothness.append(np.nan)
                     continue
 
-                yreal = interpChoices(x, yreal, interp_type)
-                yimag = interpChoices(x, yimag, interp_type)
-                y = yreal + 1.0j * yimag
-                yf = np.fft.fft(y)
-                smooth = np.average(abs(yf[1 : int(nFreq / 2)]) / abs(yf[0]))
-                if normalise and j == 127:
-                    smooth = 0
-
-                if interp_type == "linear" and debug:
-                    if debugTargetObs is None:
-                        if j in debugTargetAnt:
-                            print(filename)
-                            print(cal.annames[j])
-                            plotDebug(old, yreal, yimag, y, yf, obs)
-                    elif obs in debugTargetObs:
-                        if j in debugTargetAnt:
-                            # print(filename, cal.annames[j])
-                            # plt.plot(abs(cal.gain_array[0, j, :, 0]))
-                            # plt.show()
-                            print(filename)
-                            print(cal.annames[j])
-                            plotDebug(old, yreal, yimag, y, yf, obs)
+                smooth = calcSmooth(
+                    x,
+                    old,
+                    yreal,
+                    yimag,
+                    interp_type,
+                    obs,
+                    ant,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
 
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
+                old1 = cal.gain_array[0, j, :, 3].copy()
                 yreal1 = cal.gain_array[0, j, :, 3].real
                 yimag1 = cal.gain_array[0, j, :, 3].imag
-                yreal1 = interpChoices(x, yreal1, interp_type)
-                yimag1 = interpChoices(x, yimag1, interp_type)
-                y1 = yreal1 + 1.0j * yimag1
-                yf1 = np.fft.fft(y1)
-                smooth1 = np.average(abs(yf1[1 : int(nFreq / 2)]) / abs(yf1[0]))
-                if normalise and j == 127:
-                    smooth1 = 0
+                smooth1 = calcSmooth(
+                    x,
+                    old1,
+                    yreal1,
+                    yimag1,
+                    interp_type,
+                    obs,
+                    ant,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAll.append(xxSmoothness)
@@ -375,19 +373,6 @@ def calAmpSmoothness(
             if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)
                 allObsYYSmoothness.append(yySmoothness)
-
-            # Save figure for particular interp_type
-            plt.plot(ant, xxSmoothness, label="XX", color="blue")
-            plt.plot(ant, yySmoothness, label="YY", color="red")
-            plt.xlabel("Antenna number")
-            plt.ylabel("Smoothness")
-            plt.title(obs + " " + interp_type)
-            plt.legend()
-            plt.xticks(np.linspace(0, 127, 128), minor=True)
-            plt.grid()
-            plt.grid(which="minor", alpha=0.5)
-            plt.savefig(smoothDir + "/" + str(obs) + "_" + interp_type + ".pdf")
-            plt.clf()
 
         # Save figure for all interp types
         xMax = np.nanmax(xxSmoothnessAll)
@@ -515,42 +500,40 @@ def calPhaseSmoothness(
                     continue
 
                 # Interpolate phase solutions
-                y = interpChoices(x, y, interp_type)
-                linearFit = Polynomial.fit(x, y, deg=1)
-
-                yf = np.fft.fft(y)
-                smooth = np.average(abs(yf[1 : int(nFreq / 2)]) / abs(yf[0]))
-                if normalise and j == 127:
-                    smooth = 0
-
-                if interp_type == "linear" and debug:
-                    if debugTargetObs is None:
-                        if j in debugTargetAnt:
-                            print(filename)
-                            print(cal.annames[j])
-                            plotDebug(old, y, 0, y, yf, obs)
-                    elif obs in debugTargetObs:
-                        if j in debugTargetAnt:
-                            print(filename)
-                            print(cal.annames[j])
-                            plt.plot(y)
-                            xx, yy = linearFit.linspace()
-                            print(xx, yy)
-                            plt.plot(xx, yy)
-                            plt.show()
-                            # plotDebug(old, y, 0, y, yf, obs)
+                smooth = calcSmooth(
+                    x,
+                    old,
+                    y,
+                    [0],
+                    interp_type,
+                    obs,
+                    ant,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
 
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
+                old1 = cal.phases[0, j, :, 3].copy()
                 y1 = cal.phases[0, j, :, 3]
                 y1 = movePhases(y1)
 
-                y1 = interpChoices(x, y1, interp_type)
-                yf1 = np.fft.fft(y1)
-                smooth1 = np.average(abs(yf1[1 : int(nFreq / 2)]) / abs(yf1[0]))
-                if normalise and j == 127:
-                    smooth1 = 0
+                smooth1 = calcSmooth(
+                    x,
+                    old1,
+                    y1,
+                    [0],
+                    interp_type,
+                    obs,
+                    ant,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
 
                 yySmoothness.append(smooth1)
 
@@ -560,19 +543,6 @@ def calPhaseSmoothness(
             if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)
                 allObsYYSmoothness.append(yySmoothness)
-
-            # Save figure for particular interp_type
-            plt.plot(ant, xxSmoothness, label="XX", color="blue")
-            plt.plot(ant, yySmoothness, label="YY", color="red")
-            plt.xlabel("Antenna number")
-            plt.ylabel("Smoothness")
-            plt.title(obs + " " + interp_type)
-            plt.legend()
-            plt.xticks(np.linspace(0, 127, 128), minor=True)
-            plt.grid()
-            plt.grid(which="minor", alpha=0.5)
-            plt.savefig(smoothDir + "/" + str(obs) + "_" + interp_type + ".pdf")
-            plt.clf()
 
         # Save figure for all interp types
         xMax = np.nanmax(xxSmoothnessAll)
@@ -626,6 +596,85 @@ def calPhaseSmoothness(
         gridDict,
         uniqueDict,
     )
+
+
+def calcSmooth(
+    x,
+    old,
+    yreal,
+    yimag,
+    interp_type,
+    obs,
+    ant,
+    norm,
+    debug,
+    debugTargetObs,
+    debugTargetAnt,
+):
+    """Function for calculating the smoothness of calibration solutions
+
+    Parameters
+    ----------
+    x: array
+        contains antenna numbers
+    old: array
+        contains the original calibration solutions for debugging purposes
+    yreal: array
+        non-interpolated real part of the calibration solutions
+    yimag: array
+        non-interpolated imaginary part of the calibratio solutions
+    interp_type: string
+        interpolation method used
+    obs: string
+        observation id
+    ant: int
+        antenna number
+    norm: bool
+        if using the normalise calibrations then skip antenna 127
+    debug: bool
+        print and plot debug stuff
+    debugTargetObs: list
+        list of target observations for debugging
+    debugTargetAnt: list
+        list of target antennas for debugging
+
+    Returns
+    -------
+    smooth: float
+        a value representing the smoothness of the calibration solutions
+
+    -------
+    """
+
+    # If we are looking at normalised calibration solutions then return
+    # immediately when we are reference antenna
+    if norm and ant == 127:
+        return 0
+
+    # Check if we are doing phase calibrations
+    if len(yimag) == 1:
+        y = interpChoices(x, yreal, interp_type)
+        linearFit = Polynomial.fit(x, y, deg=1)
+    else:
+        yreal = interpChoices(x, yreal, interp_type)
+        yimag = interpChoices(x, yimag, interp_type)
+        y = yreal + 1j * yimag
+
+    yf = np.fft.fft(y)
+    smooth = np.average(abs(yf[1 : int(len(x) / 2)]) / abs(yf[0]))
+
+    if interp_type == "linear" and debug:
+        if debugTargetObs is None:
+            if ant in debugTargetAnt:
+                plotDebug(old, y, 0, y, yf, obs)
+            elif obs in debugTargetObs:
+                if ant in debugTargetAnt:
+                    plt.plot(y)
+                    xx, yy = linearFit.linspace()
+                    print(xx, yy)
+                    plt.plot(xx, yy)
+                    plt.show()
+    return smooth
 
 
 def movePhases(phases):
