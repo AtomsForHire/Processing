@@ -339,7 +339,7 @@ def calAmpSmoothness(
                     yimag,
                     interp_type,
                     obs,
-                    ant,
+                    j,
                     normalise,
                     debug,
                     debugTargetObs,
@@ -359,7 +359,7 @@ def calAmpSmoothness(
                     yimag1,
                     interp_type,
                     obs,
-                    ant,
+                    j,
                     normalise,
                     debug,
                     debugTargetObs,
@@ -507,7 +507,7 @@ def calPhaseSmoothness(
                     [0],
                     interp_type,
                     obs,
-                    ant,
+                    j,
                     normalise,
                     debug,
                     debugTargetObs,
@@ -528,7 +528,7 @@ def calPhaseSmoothness(
                     [0],
                     interp_type,
                     obs,
-                    ant,
+                    j,
                     normalise,
                     debug,
                     debugTargetObs,
@@ -667,13 +667,15 @@ def calcSmooth(
         if debugTargetObs is None:
             if ant in debugTargetAnt:
                 plotDebug(old, y, 0, y, yf, obs)
-            elif obs in debugTargetObs:
-                if ant in debugTargetAnt:
-                    plt.plot(y)
-                    xx, yy = linearFit.linspace()
-                    print(xx, yy)
-                    plt.plot(xx, yy)
-                    plt.show()
+        elif obs in debugTargetObs:
+            if ant in debugTargetAnt:
+                # plt.plot(y)
+                # xx, yy = linearFit.linspace()
+                # print(xx, yy)
+                # plt.plot(xx, yy)
+                # plt.show()
+                plotDebug(old, yreal, yimag, y, yf, obs)
+
     return smooth
 
 
