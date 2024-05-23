@@ -514,6 +514,18 @@ def calPhaseSmoothness(
                     debugTargetAnt,
                 )
 
+                if interp_type == "linear":
+                    phaseFit(
+                        x,
+                        y,
+                        interp_type,
+                        obs,
+                        normalise,
+                        debug,
+                        debugTargetObs,
+                        debugTargetAnt,
+                    )
+
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
@@ -598,6 +610,60 @@ def calPhaseSmoothness(
     )
 
 
+def phaseFit(x, y, interp_type, obs, norm, debug, debugTargetObs, debugTargetAnt):
+    """Function for calculating RMSE of the phase solutions and cubic and quadratic coeffs
+
+    Parameters
+    ----------
+    x: array
+        frequency array
+    y: array
+        phase solutions
+
+    Returns
+    -------
+    rmse: float
+        root mean squared error
+
+    """
+
+    y = interpChoices(x, y, interp_type)
+    # Do linear fit stats
+    # NOTE: For some absolutely non-sensical reason numpy has a domain
+    # and window parameter. By default the domain is the domain of the
+    # x-values, but window has default value of [-1, 1]. This means
+    # the fitting is done in the correct domain, but outputting the
+    # coefs are in the window-domain. SO fucking stupid.
+    linearFit = Polynomial.fit(
+        x, y, deg=1, domain=[x.min(), x.max()], window=[x.min(), x.max()]
+    )
+    residuals = np.zeros(len(x))
+    xx, yy = linearFit.linspace(len(x))
+    for i in range(0, len(x)):
+        residuals[i] = y[i] - yy[i]
+
+    rmse = np.sqrt(np.mean((y - yy) ** 2))
+    # if debug and obs in debugTargetObs:
+
+    # Do cubic fit stats
+    cubicFit = Polynomial.fit(
+        x, y, deg=3, domain=[x.min(), x.max()], window=[x.min(), x.max()]
+    )
+    xx1, yy1 = cubicFit.linspace(len(x))
+    # print(linearFit.coef)
+    # print(linearFit.convert().coef)
+    fig, (ax1, ax2) = plt.subplots(2)
+    ax1.plot(y, "r.", alpha=0.5, markersize=0.75)
+    ax1.plot(xx, yy, "b-", alpha=0.5, linewidth=0.5)
+    ax1.plot(xx1, yy1, "g-", alpha=0.5, linewidth=0.5)
+    ax2.plot(residuals, "b.", markersize=0.9)
+    print(cubicFit.coef[3])
+    plt.show()
+
+    sys.exit()
+    return rmse
+
+
 def calcSmooth(
     x,
     old,
@@ -654,7 +720,6 @@ def calcSmooth(
     # Check if we are doing phase calibrations
     if len(yimag) == 1:
         y = interpChoices(x, yreal, interp_type)
-        linearFit = Polynomial.fit(x, y, deg=1)
     else:
         yreal = interpChoices(x, yreal, interp_type)
         yimag = interpChoices(x, yimag, interp_type)

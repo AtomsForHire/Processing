@@ -262,19 +262,19 @@ if __name__ == "__main__":
         # print("Calibration RMS")
         # calibration.calRMS(obsids, rmsDir, solDir)
 
-        print("AMP SMOOTHNESS")
-        calibration.calAmpSmoothness(
-            obsids,
-            solDir,
-            smoothDirAmps,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
-        )
+        # print("AMP SMOOTHNESS")
+        # calibration.calAmpSmoothness(
+        #     obsids,
+        #     solDir,
+        #     smoothDirAmps,
+        #     distribution,
+        #     gridDict,
+        #     uniqueDict,
+        #     debug,
+        #     debugObsList,
+        #     debugAntList,
+        #     norm,
+        # )
 
         print("PHASE SMOOTHNESS")
         calibration.calPhaseSmoothness(
