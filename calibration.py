@@ -666,7 +666,7 @@ def calcSmooth(
     if interp_type == "linear" and debug:
         if debugTargetObs is None:
             if ant in debugTargetAnt:
-                plotDebug(old, y, 0, y, yf, obs)
+                plotDebug(old, y, 0, y, yf, obs, ant)
         elif obs in debugTargetObs:
             if ant in debugTargetAnt:
                 # plt.plot(y)
@@ -674,7 +674,7 @@ def calcSmooth(
                 # print(xx, yy)
                 # plt.plot(xx, yy)
                 # plt.show()
-                plotDebug(old, yreal, yimag, y, yf, obs)
+                plotDebug(old, yreal, yimag, y, yf, obs, ant)
 
     return smooth
 
@@ -711,7 +711,7 @@ def movePhases(phases):
     return phases
 
 
-def plotDebug(old, yreal, yimag, y, yf, obs):
+def plotDebug(old, yreal, yimag, y, yf, obs, ant):
     """Function to use when debugging the smoothness parameter
 
     Parameters
@@ -726,6 +726,8 @@ def plotDebug(old, yreal, yimag, y, yf, obs):
         Fourier transformed yreal + 1j*yimag
     obs: string
         String for observation id
+    ant: integer
+        antenna number
 
     Returns
     -------
@@ -738,7 +740,7 @@ def plotDebug(old, yreal, yimag, y, yf, obs):
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
         ax1.plot(old.real, "r.", alpha=0.5, markersize=0.75, label="old")
         ax1.plot(yreal, linewidth=0.5, label="interp")
-        ax1.set_title(obs + " amps solutions real")
+        ax1.set_title(obs + " amps solutions real antenna " + str(ant))
         ax1.legend()
 
         ax2.plot(old.imag, "r.", alpha=0.5, markersize=0.75, label="old")
