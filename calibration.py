@@ -468,6 +468,9 @@ def calPhaseSmoothness(
     interps = ["zero", "linear"]
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
+    allObsXXRMSE = list()
+    allObsYYRMSE = list()
+
     # Loop through observations
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
@@ -479,11 +482,16 @@ def calPhaseSmoothness(
 
         xxSmoothnessAll = list()
         yySmoothnessAll = list()
+
+        xxRMSEAll = list()
+        yyRMSEAll = list()
         # Loop through interpolation types
         for interp_type in interps:
             xxSmoothness = list()
             yySmoothness = list()
 
+            xxRMSE = list()
+            yyRMSE = list()
             # Loop over antennas (Except the last one which is the reference antenna)
             for j in range(0, len(cal.phases[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
@@ -497,6 +505,8 @@ def calPhaseSmoothness(
                 if np.nansum(y) == 0.0:
                     xxSmoothness.append(np.nan)
                     yySmoothness.append(np.nan)
+                    xxRMSE.append(np.nan)
+                    yyRMSE.append(np.nan)
                     continue
 
                 # Interpolate phase solutions
@@ -515,7 +525,7 @@ def calPhaseSmoothness(
                 )
 
                 if interp_type == "linear":
-                    phaseFit(
+                    rmse = phaseFit(
                         x,
                         y,
                         interp_type,
@@ -525,6 +535,7 @@ def calPhaseSmoothness(
                         debugTargetObs,
                         debugTargetAnt,
                     )
+                    xxRMSE.append(rmse)
 
                 xxSmoothness.append(smooth)
 
@@ -547,6 +558,19 @@ def calPhaseSmoothness(
                     debugTargetAnt,
                 )
 
+                if interp_type == "linear":
+                    rmse1 = phaseFit(
+                        x,
+                        y,
+                        interp_type,
+                        obs,
+                        normalise,
+                        debug,
+                        debugTargetObs,
+                        debugTargetAnt,
+                    )
+                    yyRMSE.append(rmse1)
+
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAll.append(xxSmoothness)
@@ -555,6 +579,8 @@ def calPhaseSmoothness(
             if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)
                 allObsYYSmoothness.append(yySmoothness)
+                allObsXXRMSE.append(xxRMSE)
+                allObsYYRMSE.append(yyRMSE)
 
         # Save figure for all interp types
         xMax = np.nanmax(xxSmoothnessAll)
@@ -609,6 +635,14 @@ def calPhaseSmoothness(
         uniqueDict,
     )
 
+    plotSmoothnessAllObs(
+        obsids, ant, allObsXXRMSE, smoothDir, distribution, "xx", gridDict, uniqueDict
+    )
+
+    plotSmoothnessAllObs(
+        obsids, ant, allObsYYRMSE, smoothDir, distribution, "yy", gridDict, uniqueDict
+    )
+
 
 def phaseFit(x, y, interp_type, obs, norm, debug, debugTargetObs, debugTargetAnt):
     """Function for calculating RMSE of the phase solutions and cubic and quadratic coeffs
@@ -646,21 +680,21 @@ def phaseFit(x, y, interp_type, obs, norm, debug, debugTargetObs, debugTargetAnt
     # if debug and obs in debugTargetObs:
 
     # Do cubic fit stats
-    cubicFit = Polynomial.fit(
-        x, y, deg=3, domain=[x.min(), x.max()], window=[x.min(), x.max()]
-    )
-    xx1, yy1 = cubicFit.linspace(len(x))
-    # print(linearFit.coef)
-    # print(linearFit.convert().coef)
-    fig, (ax1, ax2) = plt.subplots(2)
-    ax1.plot(y, "r.", alpha=0.5, markersize=0.75)
-    ax1.plot(xx, yy, "b-", alpha=0.5, linewidth=0.5)
-    ax1.plot(xx1, yy1, "g-", alpha=0.5, linewidth=0.5)
-    ax2.plot(residuals, "b.", markersize=0.9)
-    print(cubicFit.coef[3])
-    plt.show()
-
-    sys.exit()
+    # cubicFit = Polynomial.fit(
+    #     x, y, deg=3, domain=[x.min(), x.max()], window=[x.min(), x.max()]
+    # )
+    # xx1, yy1 = cubicFit.linspace(len(x))
+    # # print(linearFit.coef)
+    # # print(linearFit.convert().coef)
+    # fig, (ax1, ax2) = plt.subplots(2)
+    # ax1.plot(y, "r.", alpha=0.5, markersize=0.75)
+    # ax1.plot(xx, yy, "b-", alpha=0.5, linewidth=0.5)
+    # ax1.plot(xx1, yy1, "g-", alpha=0.5, linewidth=0.5)
+    # ax2.plot(residuals, "b.", markersize=0.9)
+    # print(cubicFit.coef[3])
+    # plt.show()
+    #
+    # sys.exit()
     return rmse
 
 
