@@ -66,6 +66,11 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE smooth_dir_phase IN CONFIG FILE")
 
+        if "phase_stats_dir" in temp.keys():
+            phaseStatsDir = temp["phase_stats_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE phase_stats_dir IN CONFIG FILE")
+
         if "sol_dir" in temp.keys():
             solDir = temp["sol_dir"]
         else:
@@ -112,6 +117,7 @@ def getDirs(filename):
         varDir,
         smoothDirAmps,
         smoothDirPhase,
+        phaseStatsDir,
         solDir,
         stats,
         excludeList,
@@ -204,6 +210,7 @@ if __name__ == "__main__":
         varDir,
         smoothDirAmps,
         smoothDirPhase,
+        phaseStatsDir,
         solDir,
         stats,
         excludeList,
@@ -218,6 +225,7 @@ if __name__ == "__main__":
     Path(varDir).mkdir(parents=True, exist_ok=True)
     Path(smoothDirAmps).mkdir(parents=True, exist_ok=True)
     Path(smoothDirPhase).mkdir(parents=True, exist_ok=True)
+    Path(phaseStatsDir).mkdir(parents=True, exist_ok=True)
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
@@ -261,7 +269,7 @@ if __name__ == "__main__":
         #
         # print("Calibration RMS")
         # calibration.calRMS(obsids, rmsDir, solDir)
-
+        #
         # print("AMP SMOOTHNESS")
         # calibration.calAmpSmoothness(
         #     obsids,
@@ -275,12 +283,13 @@ if __name__ == "__main__":
         #     debugAntList,
         #     norm,
         # )
-
+        #
         print("PHASE SMOOTHNESS")
         calibration.calPhaseSmoothness(
             obsids,
             solDir,
             smoothDirPhase,
+            phaseStatsDir,
             distribution,
             gridDict,
             uniqueDict,

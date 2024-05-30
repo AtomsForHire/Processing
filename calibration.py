@@ -143,8 +143,48 @@ def interpChoices(x, y, interp_type):
     return y
 
 
+def plotAllInterp(
+    ants, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
+):
+    # Save figure for all interp types
+    xMax = np.nanmax(xxSmoothnessAllInterps)
+    yMax = np.nanmax(yySmoothnessAllInterps)
+    ls = ["solid", "dashed", "dotted"]
+    legend_lines = list()
+    for n in range(0, len(interps)):
+        plt.plot(ants, xxSmoothnessAllInterps[n], color="blue", linestyle=ls[n])
+        plt.plot(ants, yySmoothnessAllInterps[n], color="red", linestyle=ls[n])
+        ax = plt.gca()
+        (temp,) = ax.plot(0, -1, color="grey", linestyle=ls[n], label=interps[n])
+        legend_lines.append(temp)
+
+        (l4,) = ax.plot(0, -1, color="blue", label="XX")
+        (l5,) = ax.plot(0, -1, color="red", label="YY")
+        first_legend = ax.legend(handles=legend_lines, loc="upper right")
+        ax.add_artist(first_legend)
+        ax.legend(handles=[l4, l5], loc="upper left")
+        plt.xlabel("Antenna number")
+        plt.ylabel("Smoothness")
+        plt.ylim(0, 1.15 * np.max((xMax, yMax)))
+        plt.title(obs)
+        plt.xticks(np.linspace(0, 127, 128), minor=True)
+        plt.grid()
+        plt.grid(which="minor", alpha=0.5)
+        plt.savefig(smoothDir + "/" + str(obs) + "_all.pdf")
+        plt.clf()
+
+
 def plotSmoothnessAllObs(
-    obsids, ant, smoothness, smoothDir, distribution, pol, gridDict, uniqueDict
+    obsids,
+    ant,
+    smoothness,
+    smoothDir,
+    distribution,
+    pol,
+    gridDict,
+    uniqueDict,
+    yAxis="Smoothness",
+    name="",
 ):
     """Function for plotting the smoothness metric
 
@@ -166,6 +206,9 @@ def plotSmoothnessAllObs(
         Dictionary where keys are obs ids and values are their grid number
     uniqueDict: dictionary
         Dictionary of unique grid numbers and how often they occur
+    rmse: bool
+        Save using rmse settings or not, False by default so it doesn't break
+        original calls
 
     Returns
     -------
@@ -249,7 +292,8 @@ def plotSmoothnessAllObs(
 
     ax = plt.gca()
     plt.xlabel("Antenna number")
-    plt.ylabel("Smoothness")
+    plt.ylabel(yAxis)
+
     plt.xticks(np.linspace(0, 127, 128), minor=True)
     plt.grid()
     plt.grid(which="minor", alpha=0.5)
@@ -259,41 +303,30 @@ def plotSmoothnessAllObs(
         bbox_artists.append(grid_legend)
 
     plt.savefig(
-        smoothDir + "/" + "all_obs_" + pol + "_linear.pdf",
+        smoothDir + "/" + "all_obs_" + pol + name + "_linear.pdf",
         bbox_extra_artists=(bbox_artists),
         bbox_inches="tight",
     )
     plt.clf()
 
 
-def calAmpSmoothness(
-    obsids,
-    solDir,
-    smoothDir,
-    distribution,
-    gridDict,
-    uniqueDict,
-    debug,
-    debugTargetObs,
-    debugTargetAnt,
-    normalise,
-):
-    """Function for calculating smoothness of calibration gain amplitudes for all obs
+def plotDebug(old, yreal, yimag, y, yf, obs, ant):
+    """Function to use when debugging the smoothness parameter
 
     Parameters
     ----------
-    obsids: list
-        List of observation ids
-    smoothDir: string
-        Path to save results to
-    distribution: string
-        How the obs are sorted
-    gridDict: dictionary
-        Dictionary where keys are obs ids and values are their grid number
-    uniqueDict: dictionary
-        Dictionary of unique grid numbers and how often they occur
-    normalise: bool
-        True or False, enable or disable normalisation
+    old: array
+        Contains the real and imaginary parts of the original calibration solutions
+    yreal: array/int
+        Interpolated real part of the original calibration sol
+    yimag: array
+        Same as above but for imaginary
+    yf: array
+        Fourier transformed yreal + 1j*yimag
+    obs: string
+        String for observation id
+    ant: integer
+        antenna number
 
     Returns
     -------
@@ -301,350 +334,69 @@ def calAmpSmoothness(
 
     -------
     """
+    if len(yimag) != 1:
+        smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
+        ax1.plot(old.real, "r.", alpha=0.5, markersize=0.75, label="old")
+        ax1.plot(yreal, linewidth=0.5, label="interp")
+        ax1.set_title(obs + " amps solutions real antenna " + str(ant))
+        ax1.legend()
 
-    ant = np.linspace(0, 127, 128)
-    # interps = ['zero', 'linear', 'cspline']
-    interps = ["zero", "linear"]
-    allObsXXSmoothness = list()
-    allObsYYSmoothness = list()
-    for i in tqdm(range(0, len(obsids))):
-        obs = obsids[i]
-        filename = solDir + "/" + obs + "_solutions.fits"
-        cal = read_calfits.CalFits(filename, norm=normalise)
-        nFreq = cal.Nchan
-        x = np.linspace(0, nFreq - 1, nFreq)
+        ax2.plot(old.imag, "r.", alpha=0.5, markersize=0.75, label="old")
+        ax2.plot(yimag, linewidth=0.5, label="interp")
+        ax2.set_title(obs + " amps solutions imag")
 
-        xxSmoothnessAll = list()
-        yySmoothnessAll = list()
-        for interp_type in interps:
-            xxSmoothness = list()
-            yySmoothness = list()
-            # Loop over antennas
-            for j in range(0, len(cal.gain_array[0, :, 0, 0])):
-                # Extract amplitudes for XX pol
-                old = cal.gain_array[0, j, :, 0].copy()
-                yreal = cal.gain_array[0, j, :, 0].real.copy()
-                yimag = cal.gain_array[0, j, :, 0].imag.copy()
+        ax3.plot(abs(y), linewidth=0.5)
+        ax3.set_title(obs + " absolute value")
 
-                # Skip flagged antennas
-                if (np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0):
-                    xxSmoothness.append(np.nan)
-                    yySmoothness.append(np.nan)
-                    continue
-
-                smooth = calcSmooth(
-                    x,
-                    old,
-                    yreal,
-                    yimag,
-                    interp_type,
-                    obs,
-                    j,
-                    normalise,
-                    debug,
-                    debugTargetObs,
-                    debugTargetAnt,
-                )
-
-                xxSmoothness.append(smooth)
-
-                # Samething for YY pol
-                old1 = cal.gain_array[0, j, :, 3].copy()
-                yreal1 = cal.gain_array[0, j, :, 3].real
-                yimag1 = cal.gain_array[0, j, :, 3].imag
-                smooth1 = calcSmooth(
-                    x,
-                    old1,
-                    yreal1,
-                    yimag1,
-                    interp_type,
-                    obs,
-                    j,
-                    normalise,
-                    debug,
-                    debugTargetObs,
-                    debugTargetAnt,
-                )
-                yySmoothness.append(smooth1)
-
-            xxSmoothnessAll.append(xxSmoothness)
-            yySmoothnessAll.append(yySmoothness)
-
-            if interp_type == "linear":
-                allObsXXSmoothness.append(xxSmoothness)
-                allObsYYSmoothness.append(yySmoothness)
-
-        # Save figure for all interp types
-        xMax = np.nanmax(xxSmoothnessAll)
-        yMax = np.nanmax(yySmoothnessAll)
-        ls = ["solid", "dashed", "dotted"]
-        interp_label = ["zero", "linear", "cspline"]
-        legend_lines = list()
-        for n in range(0, len(interps)):
-            plt.plot(ant, xxSmoothnessAll[n], color="blue", linestyle=ls[n])
-            plt.plot(ant, yySmoothnessAll[n], color="red", linestyle=ls[n])
-            ax = plt.gca()
-            (temp,) = ax.plot(
-                0, -1, color="grey", linestyle=ls[n], label=interp_label[n]
-            )
-            legend_lines.append(temp)
-
-        (l4,) = ax.plot(0, -1, color="blue", label="XX")
-        (l5,) = ax.plot(0, -1, color="red", label="YY")
-        first_legend = ax.legend(handles=legend_lines, loc="upper right")
-        ax.add_artist(first_legend)
-        ax.legend(handles=[l4, l5], loc="upper left")
-        plt.xlabel("Antenna number")
-        plt.ylabel("Smoothness")
-        plt.ylim(0, 1.15 * np.max((xMax, yMax)))
-        plt.title(obs)
-        plt.xticks(np.linspace(0, 127, 128), minor=True)
-        plt.grid()
-        plt.grid(which="minor", alpha=0.5)
-        plt.savefig(smoothDir + "/" + str(obs) + "_all.pdf")
-        plt.clf()
-
-    # Save figure for all obsids XX
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXSmoothness,
-        smoothDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYSmoothness,
-        smoothDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-    )
+        ax4.plot(abs(yf))
+        ax4.set_title(f"Absolute value of fourier transform {smooth}")
+        plt.show()
+    else:
+        smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
+        fig, (ax1, ax2) = plt.subplots(2)
+        ax1.plot(old, "r.", alpha=0.5, markersize=0.75, label="old")
+        ax1.plot(yreal, linewidth=0.5, label="interp")
+        ax1.set_title(obs + " phase solutions")
+        ax1.legend()
+        ax2.plot(abs(yf))
+        ax2.set_title(f"Absolute value of fourier transform {smooth}")
+        plt.show()
 
 
-def calPhaseSmoothness(
-    obsids,
-    solDir,
-    smoothDir,
-    distribution,
-    gridDict,
-    uniqueDict,
-    debug,
-    debugTargetObs,
-    debugTargetAnt,
-    normalise,
-):
-    """Function for calculating smoothness of calibration phase amplitudes for all obs
+def movePhases(phases):
+    """Function to make phases not wrap
 
     Parameters
     ----------
-    obsids: list
-        List of observation ids
-    smoothDir: string
-        Path to save results to
-    distribution: string
-        How the obs are sorted
-    gridDict: dictionary
-        Dictionary where keys are obs ids and values are their grid number
-    uniqueDict: dictionary
-        Dictionary of unique grid numbers and how often they occur
-    normalise: bool
-        True or False, enable or disable normalisation
+    phases: array
+        array of phases to process
 
     Returns
     -------
-    None
-
-    -------
+    phases: array
+        modified phases
     """
 
-    ant = np.linspace(0, 127, 128)
-    interps = ["zero", "linear"]
-    allObsXXSmoothness = list()
-    allObsYYSmoothness = list()
-    allObsXXRMSE = list()
-    allObsYYRMSE = list()
+    # BUG: NEED TO DEAL WITH FLAGGED FREQUENCY CHANNELS
+    prevAngle = phases[0]
+    for i in range(1, len(phases)):
+        currAngle = phases[i]
+        if np.isnan(currAngle):
+            continue
 
-    # Loop through observations
-    for i in tqdm(range(0, len(obsids))):
-        obs = obsids[i]
-        filename = solDir + "/" + obs + "_solutions.fits"
-        cal = read_calfits.CalFits(filename, norm=normalise)
+        if currAngle - prevAngle > 180.0:
+            currAngle -= 360.0
+        if currAngle - prevAngle < -180.0:
+            currAngle += 360.0
 
-        nFreq = cal.Nchan
-        x = np.linspace(0, nFreq - 1, nFreq)
+        prevAngle = currAngle
+        phases[i] = currAngle
 
-        xxSmoothnessAll = list()
-        yySmoothnessAll = list()
-
-        xxRMSEAll = list()
-        yyRMSEAll = list()
-        # Loop through interpolation types
-        for interp_type in interps:
-            xxSmoothness = list()
-            yySmoothness = list()
-
-            xxRMSE = list()
-            yyRMSE = list()
-            # Loop over antennas (Except the last one which is the reference antenna)
-            for j in range(0, len(cal.phases[0, :, 0, 0])):
-                # Extract amplitudes for XX pol
-                # old for debugging purposes
-                old = cal.phases[0, j, :, 0].copy()
-                y = cal.phases[0, j, :, 0].copy()
-                # Normalise all angles to sit between [0, 360]
-                y = movePhases(y)
-
-                # Skip flagged antennas
-                if np.nansum(y) == 0.0:
-                    xxSmoothness.append(np.nan)
-                    yySmoothness.append(np.nan)
-                    xxRMSE.append(np.nan)
-                    yyRMSE.append(np.nan)
-                    continue
-
-                # Interpolate phase solutions
-                smooth = calcSmooth(
-                    x,
-                    old,
-                    y,
-                    [0],
-                    interp_type,
-                    obs,
-                    j,
-                    normalise,
-                    debug,
-                    debugTargetObs,
-                    debugTargetAnt,
-                )
-
-                if interp_type == "linear":
-                    rmse = phaseFit(
-                        x,
-                        y,
-                        interp_type,
-                        obs,
-                        normalise,
-                        debug,
-                        debugTargetObs,
-                        debugTargetAnt,
-                    )
-                    xxRMSE.append(rmse)
-
-                xxSmoothness.append(smooth)
-
-                # Samething for YY pol
-                old1 = cal.phases[0, j, :, 3].copy()
-                y1 = cal.phases[0, j, :, 3]
-                y1 = movePhases(y1)
-
-                smooth1 = calcSmooth(
-                    x,
-                    old1,
-                    y1,
-                    [0],
-                    interp_type,
-                    obs,
-                    j,
-                    normalise,
-                    debug,
-                    debugTargetObs,
-                    debugTargetAnt,
-                )
-
-                if interp_type == "linear":
-                    rmse1 = phaseFit(
-                        x,
-                        y,
-                        interp_type,
-                        obs,
-                        normalise,
-                        debug,
-                        debugTargetObs,
-                        debugTargetAnt,
-                    )
-                    yyRMSE.append(rmse1)
-
-                yySmoothness.append(smooth1)
-
-            xxSmoothnessAll.append(xxSmoothness)
-            yySmoothnessAll.append(yySmoothness)
-
-            if interp_type == "linear":
-                allObsXXSmoothness.append(xxSmoothness)
-                allObsYYSmoothness.append(yySmoothness)
-                allObsXXRMSE.append(xxRMSE)
-                allObsYYRMSE.append(yyRMSE)
-
-        # Save figure for all interp types
-        xMax = np.nanmax(xxSmoothnessAll)
-        yMax = np.nanmax(yySmoothnessAll)
-        ls = ["solid", "dashed", "dotted"]
-        interp_label = ["zero", "linear", "cspline"]
-        legend_lines = list()
-        for n in range(0, len(interps)):
-            plt.plot(ant, xxSmoothnessAll[n], color="blue", linestyle=ls[n])
-            plt.plot(ant, yySmoothnessAll[n], color="red", linestyle=ls[n])
-            ax = plt.gca()
-            (temp,) = ax.plot(
-                0, -1, color="grey", linestyle=ls[n], label=interp_label[n]
-            )
-            legend_lines.append(temp)
-
-        (l4,) = ax.plot(0, -1, color="blue", label="XX")
-        (l5,) = ax.plot(0, -1, color="red", label="YY")
-        first_legend = ax.legend(handles=legend_lines, loc="upper right")
-        ax.add_artist(first_legend)
-        ax.legend(handles=[l4, l5], loc="upper left")
-        plt.xlabel("Antenna number")
-        plt.ylabel("Smoothness")
-        plt.ylim(0, 1.15 * np.max((xMax, yMax)))
-        plt.title(obs)
-        plt.xticks(np.linspace(0, 127, 128), minor=True)
-        plt.grid()
-        plt.grid(which="minor", alpha=0.5)
-        plt.savefig(smoothDir + "/" + str(obs) + "_all.pdf")
-        plt.clf()
-
-    # Save figure for all obsids XX
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXSmoothness,
-        smoothDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYSmoothness,
-        smoothDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-    )
-
-    plotSmoothnessAllObs(
-        obsids, ant, allObsXXRMSE, smoothDir, distribution, "xx", gridDict, uniqueDict
-    )
-
-    plotSmoothnessAllObs(
-        obsids, ant, allObsYYRMSE, smoothDir, distribution, "yy", gridDict, uniqueDict
-    )
+    return phases
 
 
-def phaseFit(x, y, interp_type, obs, norm, debug, debugTargetObs, debugTargetAnt):
+def phaseFit(x, y, interp_type, obs, ant, norm, debug, debugTargetObs, debugTargetAnt):
     """Function for calculating RMSE of the phase solutions and cubic and quadratic coeffs
 
     Parameters
@@ -671,31 +423,57 @@ def phaseFit(x, y, interp_type, obs, norm, debug, debugTargetObs, debugTargetAnt
     linearFit = Polynomial.fit(
         x, y, deg=1, domain=[x.min(), x.max()], window=[x.min(), x.max()]
     )
+
+    # Calculate the mean absolute deviation (MAD)
     residuals = np.zeros(len(x))
     xx, yy = linearFit.linspace(len(x))
     for i in range(0, len(x)):
         residuals[i] = y[i] - yy[i]
 
+    mad = 1.0 / len(x) * np.sum(np.abs(residuals[:] - np.mean(residuals)))
+
     rmse = np.sqrt(np.mean((y - yy) ** 2))
-    # if debug and obs in debugTargetObs:
 
     # Do cubic fit stats
-    # cubicFit = Polynomial.fit(
-    #     x, y, deg=3, domain=[x.min(), x.max()], window=[x.min(), x.max()]
-    # )
-    # xx1, yy1 = cubicFit.linspace(len(x))
-    # # print(linearFit.coef)
-    # # print(linearFit.convert().coef)
-    # fig, (ax1, ax2) = plt.subplots(2)
-    # ax1.plot(y, "r.", alpha=0.5, markersize=0.75)
-    # ax1.plot(xx, yy, "b-", alpha=0.5, linewidth=0.5)
-    # ax1.plot(xx1, yy1, "g-", alpha=0.5, linewidth=0.5)
-    # ax2.plot(residuals, "b.", markersize=0.9)
-    # print(cubicFit.coef[3])
-    # plt.show()
-    #
-    # sys.exit()
-    return rmse
+    cubicFit = Polynomial.fit(
+        x, y, deg=3, domain=[x.min(), x.max()], window=[x.min(), x.max()]
+    )
+    xx1, yy1 = cubicFit.linspace(len(x))
+    # print(linearFit.coef)
+    # print(linearFit.convert().coef)
+    if debug:
+        if obs in debugTargetObs:
+            if debugTargetAnt is None:
+                fig, (ax1, ax2) = plt.subplots(2)
+                ax1.plot(y, "r.", alpha=0.5, markersize=0.75)
+                ax1.plot(xx, yy, "b-", alpha=0.5, linewidth=0.5)
+                ax1.plot(xx1, yy1, "g-", alpha=0.5, linewidth=0.5)
+                ax1.set_title(obs + " " + str(ant))
+                ax2.plot(residuals, "b.", markersize=0.9)
+                ax2.set_title("Linear fit residuals")
+                print(cubicFit)
+                print("MAD: ", mad)
+                plt.show()
+            else:
+                if ant in debugTargetAnt:
+                    fig, (ax1, ax2) = plt.subplots(2)
+                    ax1.plot(y, "r.", alpha=0.5, markersize=0.75)
+                    ax1.plot(xx, yy, "b-", alpha=0.5, linewidth=0.5)
+                    ax1.plot(xx1, yy1, "g-", alpha=0.5, linewidth=0.5)
+                    ax1.set_title(obs + " " + str(ant))
+                    ax2.plot(residuals, "b.", markersize=0.9)
+                    ax2.set_title("Linear fit residuals")
+                    print(linearFit)
+                    print(cubicFit)
+                    print("MAD: ", mad)
+                    plt.show()
+
+    return (
+        rmse,
+        mad,
+        linearFit.coef[1],
+        (cubicFit.coef[1], cubicFit.coef[2], cubicFit.coef[3]),
+    )
 
 
 def calcSmooth(
@@ -765,7 +543,7 @@ def calcSmooth(
     if interp_type == "linear" and debug:
         if debugTargetObs is None:
             if ant in debugTargetAnt:
-                plotDebug(old, y, 0, y, yf, obs, ant)
+                plotDebug(old, y, [0], y, yf, obs, ant)
         elif obs in debugTargetObs:
             if ant in debugTargetAnt:
                 # plt.plot(y)
@@ -778,55 +556,42 @@ def calcSmooth(
     return smooth
 
 
-def movePhases(phases):
-    """Function to make phases not wrap
+def getRelDiff(xx, yy):
+    print("NUMER: ", np.mean(xx - yy))
+    print("DENOM: ", np.mean(np.abs(xx - yy)))
+    print(xx[0:10])
+    print(yy[0:10])
+    return (xx - yy) / np.abs(xx - yy)
+
+
+def calAmpSmoothness(
+    obsids,
+    solDir,
+    smoothDir,
+    distribution,
+    gridDict,
+    uniqueDict,
+    debug,
+    debugTargetObs,
+    debugTargetAnt,
+    normalise,
+):
+    """Function for calculating smoothness of calibration gain amplitudes for all obs
 
     Parameters
     ----------
-    phases: array
-        array of phases to process
-
-    Returns
-    -------
-    phases: array
-        modified phases
-    """
-
-    # BUG: NEED TO DEAL WITH FLAGGED FREQUENCY CHANNELS
-    prevAngle = phases[0]
-    for i in range(1, len(phases)):
-        currAngle = phases[i]
-        if np.isnan(currAngle):
-            continue
-
-        if currAngle - prevAngle > 180.0:
-            currAngle -= 360.0
-        if currAngle - prevAngle < -180.0:
-            currAngle += 360.0
-
-        prevAngle = currAngle
-        phases[i] = currAngle
-
-    return phases
-
-
-def plotDebug(old, yreal, yimag, y, yf, obs, ant):
-    """Function to use when debugging the smoothness parameter
-
-    Parameters
-    ----------
-    old: array
-        Contains the real and imaginary parts of the original calibration solutions
-    yreal: array/int
-        Interpolated real part of the original calibration sol
-    yimag: array
-        Same as above but for imaginary
-    yf: array
-        Fourier transformed yreal + 1j*yimag
-    obs: string
-        String for observation id
-    ant: integer
-        antenna number
+    obsids: list
+        List of observation ids
+    smoothDir: string
+        Path to save results to
+    distribution: string
+        How the obs are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+    normalise: bool
+        True or False, enable or disable normalisation
 
     Returns
     -------
@@ -834,31 +599,442 @@ def plotDebug(old, yreal, yimag, y, yf, obs, ant):
 
     -------
     """
-    if type(yimag) is not int:
-        smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
-        ax1.plot(old.real, "r.", alpha=0.5, markersize=0.75, label="old")
-        ax1.plot(yreal, linewidth=0.5, label="interp")
-        ax1.set_title(obs + " amps solutions real antenna " + str(ant))
-        ax1.legend()
 
-        ax2.plot(old.imag, "r.", alpha=0.5, markersize=0.75, label="old")
-        ax2.plot(yimag, linewidth=0.5, label="interp")
-        ax2.set_title(obs + " amps solutions imag")
+    ant = np.linspace(0, 127, 128)
+    # interps = ['zero', 'linear', 'cspline']
+    interps = ["zero", "linear"]
+    allObsXXSmoothness = list()
+    allObsYYSmoothness = list()
+    for i in tqdm(range(0, len(obsids))):
+        obs = obsids[i]
+        filename = solDir + "/" + obs + "_solutions.fits"
+        cal = read_calfits.CalFits(filename, norm=normalise)
+        nFreq = cal.Nchan
+        x = np.linspace(0, nFreq - 1, nFreq)
 
-        ax3.plot(abs(y), linewidth=0.5)
-        ax3.set_title(obs + " absolute value")
+        xxSmoothnessAllInterps = list()
+        yySmoothnessAllInterps = list()
+        for interp_type in interps:
+            xxSmoothness = list()
+            yySmoothness = list()
+            # Loop over antennas
+            for j in range(0, len(cal.gain_array[0, :, 0, 0])):
+                # Extract amplitudes for XX pol
+                old = cal.gain_array[0, j, :, 0].copy()
+                yreal = cal.gain_array[0, j, :, 0].real.copy()
+                yimag = cal.gain_array[0, j, :, 0].imag.copy()
 
-        ax4.plot(abs(yf))
-        ax4.set_title(f"Absolute value of fourier transform {smooth}")
-        plt.show()
-    else:
-        smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
-        fig, (ax1, ax2) = plt.subplots(2)
-        ax1.plot(old, "r.", alpha=0.5, markersize=0.75, label="old")
-        ax1.plot(yreal, linewidth=0.5, label="interp")
-        ax1.set_title(obs + " phase solutions")
-        ax1.legend()
-        ax2.plot(abs(yf))
-        ax2.set_title(f"Absolute value of fourier transform {smooth}")
-        plt.show()
+                # Skip flagged antennas
+                if (np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0):
+                    xxSmoothness.append(np.nan)
+                    yySmoothness.append(np.nan)
+                    continue
+
+                smooth = calcSmooth(
+                    x,
+                    old,
+                    yreal,
+                    yimag,
+                    interp_type,
+                    obs,
+                    j,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
+
+                xxSmoothness.append(smooth)
+
+                # Samething for YY pol
+                old1 = cal.gain_array[0, j, :, 3].copy()
+                yreal1 = cal.gain_array[0, j, :, 3].real
+                yimag1 = cal.gain_array[0, j, :, 3].imag
+                smooth1 = calcSmooth(
+                    x,
+                    old1,
+                    yreal1,
+                    yimag1,
+                    interp_type,
+                    obs,
+                    j,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
+                yySmoothness.append(smooth1)
+
+            xxSmoothnessAllInterps.append(xxSmoothness)
+            yySmoothnessAllInterps.append(yySmoothness)
+
+            if interp_type == "linear":
+                allObsXXSmoothness.append(xxSmoothness)
+                allObsYYSmoothness.append(yySmoothness)
+
+        # Plot for a single observation, the different smoothness for each interpolation
+        plotAllInterp(
+            ant, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
+        )
+
+    # Save figure for all obsids XX
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXSmoothness,
+        smoothDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYSmoothness,
+        smoothDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+    )
+
+
+def calPhaseSmoothness(
+    obsids,
+    solDir,
+    smoothDir,
+    phaseStatsDir,
+    distribution,
+    gridDict,
+    uniqueDict,
+    debug,
+    debugTargetObs,
+    debugTargetAnt,
+    normalise,
+):
+    """Function for calculating smoothness of calibration phase amplitudes for all obs
+
+    Parameters
+    ----------
+    obsids: list
+        List of observation ids
+    smoothDir: string
+        Path to save results to
+    distribution: string
+        How the obs are sorted
+    gridDict: dictionary
+        Dictionary where keys are obs ids and values are their grid number
+    uniqueDict: dictionary
+        Dictionary of unique grid numbers and how often they occur
+    normalise: bool
+        True or False, enable or disable normalisation
+
+    Returns
+    -------
+    None
+
+    -------
+    """
+
+    ant = np.linspace(0, 127, 128)
+    interps = ["zero", "linear"]
+    allObsXXSmoothness = list()
+    allObsYYSmoothness = list()
+    allObsXXRMSE = list()
+    allObsYYRMSE = list()
+    allObsXXMAD = list()
+    allObsYYMAD = list()
+    allObsXXCubic = list()
+    allObsYYCubic = list()
+    allObsXXQuad = list()
+    allObsYYQuad = list()
+    allObsRelDiff = list()
+
+    # Loop through observations
+    for i in tqdm(range(0, len(obsids))):
+        obs = obsids[i]
+        filename = solDir + "/" + obs + "_solutions.fits"
+        cal = read_calfits.CalFits(filename, norm=normalise)
+
+        nFreq = cal.Nchan
+        x = np.linspace(0, nFreq - 1, nFreq)
+
+        xxSmoothnessAllInterps = list()
+        yySmoothnessAllInterps = list()
+
+        # Loop through interpolation types
+        for interp_type in interps:
+            xxSmoothness = list()
+            yySmoothness = list()
+
+            xxRMSE = list()
+            yyRMSE = list()
+            xxMAD = list()
+            yyMAD = list()
+            xxCubic = list()
+            yyCubic = list()
+            xxQuad = list()
+            yyQuad = list()
+            relDiff = list()
+
+            # Loop over antennas (Except the last one which is the reference antenna)
+            for j in range(0, len(cal.phases[0, :, 0, 0])):
+                # Extract amplitudes for XX pol
+                # 'old' for debugging purposes
+                old = cal.phases[0, j, :, 0].copy()
+                y = cal.phases[0, j, :, 0].copy()
+                # Normalise all angles to sit between [0, 360]
+                y = movePhases(y)
+
+                # Skip flagged antennas
+                if np.nansum(y) == 0.0:
+                    xxSmoothness.append(np.nan)
+                    yySmoothness.append(np.nan)
+                    xxRMSE.append(np.nan)
+                    yyRMSE.append(np.nan)
+                    xxMAD.append(np.nan)
+                    yyMAD.append(np.nan)
+                    xxCubic.append(np.nan)
+                    yyCubic.append(np.nan)
+                    xxQuad.append(np.nan)
+                    yyQuad.append(np.nan)
+                    relDiff.append(np.nan)
+                    continue
+
+                # Interpolate phase solutions
+                smooth = calcSmooth(
+                    x,
+                    old,
+                    y,
+                    [0],
+                    interp_type,
+                    obs,
+                    j,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
+
+                if interp_type == "linear":
+                    rmse, mad, grad, coeffs = phaseFit(
+                        x,
+                        y,
+                        interp_type,
+                        obs,
+                        j,
+                        normalise,
+                        debug,
+                        debugTargetObs,
+                        debugTargetAnt,
+                    )
+                    xxRMSE.append(rmse)
+                    xxMAD.append(mad)
+                    xxCubic.append(coeffs[2])
+                    xxQuad.append(coeffs[1])
+
+                xxSmoothness.append(smooth)
+
+                # Samething for YY pol
+                old1 = cal.phases[0, j, :, 3].copy()
+                y1 = cal.phases[0, j, :, 3]
+                y1 = movePhases(y1)
+
+                smooth1 = calcSmooth(
+                    x,
+                    old1,
+                    y1,
+                    [0],
+                    interp_type,
+                    obs,
+                    j,
+                    normalise,
+                    debug,
+                    debugTargetObs,
+                    debugTargetAnt,
+                )
+
+                if interp_type == "linear":
+                    relDiff.append(np.mean(getRelDiff(y, y1)))
+                    print(np.mean(getRelDiff(y, y1)))
+                    sys.exit()
+                    rmse1, mad1, grad1, coeffs1 = phaseFit(
+                        x,
+                        y1,
+                        interp_type,
+                        obs,
+                        j,
+                        normalise,
+                        debug,
+                        debugTargetObs,
+                        debugTargetAnt,
+                    )
+                    yyRMSE.append(rmse1)
+                    yyMAD.append(mad1)
+                    yyCubic.append(coeffs1[2])
+                    yyQuad.append(coeffs1[2])
+
+                yySmoothness.append(smooth1)
+
+            xxSmoothnessAllInterps.append(xxSmoothness)
+            yySmoothnessAllInterps.append(yySmoothness)
+
+            if interp_type == "linear":
+                allObsXXSmoothness.append(xxSmoothness)
+                allObsYYSmoothness.append(yySmoothness)
+                allObsXXRMSE.append(xxRMSE)
+                allObsYYRMSE.append(yyRMSE)
+                allObsXXMAD.append(xxMAD)
+                allObsYYMAD.append(yyMAD)
+                allObsXXCubic.append(xxCubic)
+                allObsYYCubic.append(yyCubic)
+                allObsXXQuad.append(xxQuad)
+                allObsYYQuad.append(yyQuad)
+                allObsRelDiff.append(relDiff)
+
+        # Plot for a single observation, the different smoothness for each interpolation
+        plotAllInterp(
+            ant, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
+        )
+
+    # Save figure for all obsids XX
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXSmoothness,
+        smoothDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYSmoothness,
+        smoothDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXRMSE,
+        phaseStatsDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+        yAxis="RMSE",
+        name="_RMSE",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYRMSE,
+        phaseStatsDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+        yAxis="RMSE",
+        name="_RMSE",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXMAD,
+        phaseStatsDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+        yAxis="Mean absolute deivation",
+        name="_MAD",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYMAD,
+        phaseStatsDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+        yAxis="Mean absolute deivation",
+        name="_MAD",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXCubic,
+        phaseStatsDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+        yAxis="Cubic coefficient",
+        name="_cubic",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYCubic,
+        phaseStatsDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+        yAxis="Cubic coefficient",
+        name="_cubic",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsXXQuad,
+        phaseStatsDir,
+        distribution,
+        "xx",
+        gridDict,
+        uniqueDict,
+        yAxis="Quadratic coefficient",
+        name="_quad",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsYYQuad,
+        phaseStatsDir,
+        distribution,
+        "yy",
+        gridDict,
+        uniqueDict,
+        yAxis="Quadratic coefficient",
+        name="_quad",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsRelDiff,
+        phaseStatsDir,
+        distribution,
+        "both",
+        gridDict,
+        uniqueDict,
+        yAxis="relative difference",
+        name="_reldiff",
+    )
