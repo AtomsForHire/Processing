@@ -468,6 +468,11 @@ def phaseFit(x, y, interp_type, obs, ant, norm, debug, debugTargetObs, debugTarg
                     print("MAD: ", mad)
                     plt.show()
 
+    if norm:
+        if ant == 127:
+            rmse = np.nan
+            mad = np.nan
+
     return (
         rmse,
         mad,
@@ -556,12 +561,34 @@ def calcSmooth(
     return smooth
 
 
-def getRelDiff(xx, yy):
-    print("NUMER: ", np.mean(xx - yy))
-    print("DENOM: ", np.mean(np.abs(xx - yy)))
-    print(xx[0:10])
-    print(yy[0:10])
-    return (xx - yy) / np.abs(xx - yy)
+def getRelDiff(xx, yy, obs, ant, debug, debugTargetObs, debugTargetAnt):
+    # print("NUMER: ", np.mean(xx - yy))
+    # print("DENOM: ", np.mean(np.abs(xx + yy)))
+    # print(xx[0:10])
+    # print(yy[0:10])
+
+    # First move the points so that the first point in each set are
+    # together
+    xx -= xx[0] - yy[0]
+    result = xx - yy / np.abs(xx + yy)
+    if debug:
+        if obs in debugTargetObs:
+            if ant in debugTargetAnt:
+                plt.plot(xx, "b.")
+                plt.plot(yy, "r.")
+                print(np.mean(np.abs(xx - yy)))
+                print(np.mean(np.abs(xx + yy)))
+                idx = np.argmax(result)
+                print(xx[idx], yy[idx])
+                plt.title(obs + " " + str(np.mean(result)))
+                plt.show()
+
+    return result
+
+
+def getEuclid(xx, yy):
+    xx -= xx[0] - yy[0]
+    return np.abs(np.mean(xx - yy))
 
 
 def calAmpSmoothness(
@@ -620,21 +647,25 @@ def calAmpSmoothness(
             # Loop over antennas
             for j in range(0, len(cal.gain_array[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
-                old = cal.gain_array[0, j, :, 0].copy()
-                yreal = cal.gain_array[0, j, :, 0].real.copy()
-                yimag = cal.gain_array[0, j, :, 0].imag.copy()
+                xxOld = cal.gain_array[0, j, :, 0].copy()
+                xxReal = cal.gain_array[0, j, :, 0].real.copy()
+                xxImag = cal.gain_array[0, j, :, 0].imag.copy()
 
                 # Skip flagged antennas
-                if (np.nansum(yimag) == 0.0) and (np.nansum(yreal) == 0.0):
+                if (
+                    (np.nansum(xxImag) == 0.0)
+                    and (np.nansum(xxReal) == 0.0)
+                    or (normalise and j == 127)
+                ):
                     xxSmoothness.append(np.nan)
                     yySmoothness.append(np.nan)
                     continue
 
                 smooth = calcSmooth(
                     x,
-                    old,
-                    yreal,
-                    yimag,
+                    xxOld,
+                    xxReal,
+                    xxImag,
                     interp_type,
                     obs,
                     j,
@@ -647,14 +678,14 @@ def calAmpSmoothness(
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
-                old1 = cal.gain_array[0, j, :, 3].copy()
-                yreal1 = cal.gain_array[0, j, :, 3].real
-                yimag1 = cal.gain_array[0, j, :, 3].imag
+                yyOld = cal.gain_array[0, j, :, 3].copy()
+                yyReal = cal.gain_array[0, j, :, 3].real
+                yyImag = cal.gain_array[0, j, :, 3].imag
                 smooth1 = calcSmooth(
                     x,
-                    old1,
-                    yreal1,
-                    yimag1,
+                    yyOld,
+                    yyReal,
+                    yyImag,
                     interp_type,
                     obs,
                     j,
@@ -751,6 +782,7 @@ def calPhaseSmoothness(
     allObsXXQuad = list()
     allObsYYQuad = list()
     allObsRelDiff = list()
+    allObsEuclid = list()
 
     # Loop through observations
     for i in tqdm(range(0, len(obsids))):
@@ -778,18 +810,19 @@ def calPhaseSmoothness(
             xxQuad = list()
             yyQuad = list()
             relDiff = list()
+            euclid = list()
 
             # Loop over antennas (Except the last one which is the reference antenna)
             for j in range(0, len(cal.phases[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
                 # 'old' for debugging purposes
-                old = cal.phases[0, j, :, 0].copy()
-                y = cal.phases[0, j, :, 0].copy()
+                xxOld = cal.phases[0, j, :, 0].copy()
+                xx = cal.phases[0, j, :, 0].copy()
                 # Normalise all angles to sit between [0, 360]
-                y = movePhases(y)
+                xx = movePhases(xx)
 
                 # Skip flagged antennas
-                if np.nansum(y) == 0.0:
+                if np.nansum(xx) == 0.0:
                     xxSmoothness.append(np.nan)
                     yySmoothness.append(np.nan)
                     xxRMSE.append(np.nan)
@@ -801,13 +834,14 @@ def calPhaseSmoothness(
                     xxQuad.append(np.nan)
                     yyQuad.append(np.nan)
                     relDiff.append(np.nan)
+                    euclid.append(np.nan)
                     continue
 
                 # Interpolate phase solutions
                 smooth = calcSmooth(
                     x,
-                    old,
-                    y,
+                    xxOld,
+                    xx,
                     [0],
                     interp_type,
                     obs,
@@ -821,7 +855,7 @@ def calPhaseSmoothness(
                 if interp_type == "linear":
                     rmse, mad, grad, coeffs = phaseFit(
                         x,
-                        y,
+                        xx,
                         interp_type,
                         obs,
                         j,
@@ -838,14 +872,14 @@ def calPhaseSmoothness(
                 xxSmoothness.append(smooth)
 
                 # Samething for YY pol
-                old1 = cal.phases[0, j, :, 3].copy()
-                y1 = cal.phases[0, j, :, 3]
-                y1 = movePhases(y1)
+                yyOld = cal.phases[0, j, :, 3].copy()
+                yy = cal.phases[0, j, :, 3]
+                yy = movePhases(yy)
 
                 smooth1 = calcSmooth(
                     x,
-                    old1,
-                    y1,
+                    yyOld,
+                    yy,
                     [0],
                     interp_type,
                     obs,
@@ -857,12 +891,17 @@ def calPhaseSmoothness(
                 )
 
                 if interp_type == "linear":
-                    relDiff.append(np.mean(getRelDiff(y, y1)))
-                    print(np.mean(getRelDiff(y, y1)))
-                    sys.exit()
+                    relDiff.append(
+                        np.mean(
+                            getRelDiff(
+                                xx, yy, obs, j, debug, debugTargetObs, debugTargetAnt
+                            )
+                        )
+                    )
+                    euclid.append(np.mean(getEuclid(xx, yy)))
                     rmse1, mad1, grad1, coeffs1 = phaseFit(
                         x,
-                        y1,
+                        yy,
                         interp_type,
                         obs,
                         j,
@@ -893,6 +932,7 @@ def calPhaseSmoothness(
                 allObsXXQuad.append(xxQuad)
                 allObsYYQuad.append(yyQuad)
                 allObsRelDiff.append(relDiff)
+                allObsEuclid.append(euclid)
 
         # Plot for a single observation, the different smoothness for each interpolation
         plotAllInterp(
@@ -1037,4 +1077,17 @@ def calPhaseSmoothness(
         uniqueDict,
         yAxis="relative difference",
         name="_reldiff",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsEuclid,
+        phaseStatsDir,
+        distribution,
+        "both",
+        gridDict,
+        uniqueDict,
+        yAxis="mean of euclid distance",
+        name="_euclid",
     )
