@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mwa_qa import cal_metrics, read_calfits
 from numpy.polynomial import Polynomial
+from scipy import signal, stats
 from tqdm import tqdm
 
 
@@ -357,7 +358,7 @@ def plotDebug(old, yreal, yimag, y, yf, obs, ant):
         fig, (ax1, ax2) = plt.subplots(2)
         ax1.plot(old, "r.", alpha=0.5, markersize=0.75, label="old")
         ax1.plot(yreal, linewidth=0.5, label="interp")
-        ax1.set_title(obs + " phase solutions")
+        ax1.set_title(obs + " phase solutions smoothness")
         ax1.legend()
         ax2.plot(abs(yf))
         ax2.set_title(f"Absolute value of fourier transform {smooth}")
@@ -561,34 +562,29 @@ def calcSmooth(
     return smooth
 
 
-def getRelDiff(xx, yy, obs, ant, debug, debugTargetObs, debugTargetAnt):
-    # print("NUMER: ", np.mean(xx - yy))
-    # print("DENOM: ", np.mean(np.abs(xx + yy)))
+def getEuclidSame(xx, yy):
     # print(xx[0:10])
-    # print(yy[0:10])
+    # plt.plot(xx, label="xx")
+    # plt.plot(yy, label="yy")
+    # plt.show()
+    copy = xx.copy()
+    copy -= xx[0] - yy[0]
+    # plt.plot(xx, label="xx")
+    # plt.plot(yy, label="yy")
+    # plt.show()
+    # print(xx[0:10])
 
-    # First move the points so that the first point in each set are
-    # together
-    xx -= xx[0] - yy[0]
-    result = xx - yy / np.abs(xx + yy)
-    if debug:
-        if obs in debugTargetObs:
-            if ant in debugTargetAnt:
-                plt.plot(xx, "b.")
-                plt.plot(yy, "r.")
-                print(np.mean(np.abs(xx - yy)))
-                print(np.mean(np.abs(xx + yy)))
-                idx = np.argmax(result)
-                print(xx[idx], yy[idx])
-                plt.title(obs + " " + str(np.mean(result)))
-                plt.show()
-
-    return result
+    return np.abs(np.mean(copy - yy))
 
 
 def getEuclid(xx, yy):
-    xx -= xx[0] - yy[0]
     return np.abs(np.mean(xx - yy))
+
+
+def getKsTest(xx, yy):
+    xx -= xx[0] - yy[0]
+    result = stats.ks_2samp(xx, yy, alternative="two-sided")
+    return (stats.ks_2samp(xx, yy)[0], stats.ks_2samp(xx, yy)[1])
 
 
 def calAmpSmoothness(
@@ -602,6 +598,7 @@ def calAmpSmoothness(
     debugTargetObs,
     debugTargetAnt,
     normalise,
+    useWindow=False,
 ):
     """Function for calculating smoothness of calibration gain amplitudes for all obs
 
@@ -639,6 +636,11 @@ def calAmpSmoothness(
         nFreq = cal.Nchan
         x = np.linspace(0, nFreq - 1, nFreq)
 
+        if useWindow is True:
+            window = signal.windows.blackmanharris(nFreq)
+        else:
+            window = np.ones(nFreq)
+
         xxSmoothnessAllInterps = list()
         yySmoothnessAllInterps = list()
         for interp_type in interps:
@@ -648,8 +650,8 @@ def calAmpSmoothness(
             for j in range(0, len(cal.gain_array[0, :, 0, 0])):
                 # Extract amplitudes for XX pol
                 xxOld = cal.gain_array[0, j, :, 0].copy()
-                xxReal = cal.gain_array[0, j, :, 0].real.copy()
-                xxImag = cal.gain_array[0, j, :, 0].imag.copy()
+                xxReal = cal.gain_array[0, j, :, 0].real.copy() * window
+                xxImag = cal.gain_array[0, j, :, 0].imag.copy() * window
 
                 # Skip flagged antennas
                 if (
@@ -679,8 +681,8 @@ def calAmpSmoothness(
 
                 # Samething for YY pol
                 yyOld = cal.gain_array[0, j, :, 3].copy()
-                yyReal = cal.gain_array[0, j, :, 3].real
-                yyImag = cal.gain_array[0, j, :, 3].imag
+                yyReal = cal.gain_array[0, j, :, 3].real * window
+                yyImag = cal.gain_array[0, j, :, 3].imag * window
                 smooth1 = calcSmooth(
                     x,
                     yyOld,
@@ -708,6 +710,11 @@ def calAmpSmoothness(
             ant, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
         )
 
+    if useWindow:
+        name = "_window"
+    else:
+        name = ""
+
     # Save figure for all obsids XX
     plotSmoothnessAllObs(
         obsids,
@@ -718,6 +725,7 @@ def calAmpSmoothness(
         "xx",
         gridDict,
         uniqueDict,
+        name=name,
     )
 
     plotSmoothnessAllObs(
@@ -729,6 +737,7 @@ def calAmpSmoothness(
         "yy",
         gridDict,
         uniqueDict,
+        name=name,
     )
 
 
@@ -781,8 +790,9 @@ def calPhaseSmoothness(
     allObsYYCubic = list()
     allObsXXQuad = list()
     allObsYYQuad = list()
-    allObsRelDiff = list()
     allObsEuclid = list()
+    allObsEuclidSame = list()
+    allObsKsTest = list()
 
     # Loop through observations
     for i in tqdm(range(0, len(obsids))):
@@ -809,8 +819,9 @@ def calPhaseSmoothness(
             yyCubic = list()
             xxQuad = list()
             yyQuad = list()
-            relDiff = list()
             euclid = list()
+            euclidSame = list()
+            ksTest = list()
 
             # Loop over antennas (Except the last one which is the reference antenna)
             for j in range(0, len(cal.phases[0, :, 0, 0])):
@@ -833,8 +844,9 @@ def calPhaseSmoothness(
                     yyCubic.append(np.nan)
                     xxQuad.append(np.nan)
                     yyQuad.append(np.nan)
-                    relDiff.append(np.nan)
                     euclid.append(np.nan)
+                    euclidSame.append(np.nan)
+                    ksTest.append(np.nan)
                     continue
 
                 # Interpolate phase solutions
@@ -891,14 +903,8 @@ def calPhaseSmoothness(
                 )
 
                 if interp_type == "linear":
-                    relDiff.append(
-                        np.mean(
-                            getRelDiff(
-                                xx, yy, obs, j, debug, debugTargetObs, debugTargetAnt
-                            )
-                        )
-                    )
-                    euclid.append(np.mean(getEuclid(xx, yy)))
+                    euclidSame.append(getEuclidSame(xx, yy))
+                    euclid.append(getEuclid(xx, yy))
                     rmse1, mad1, grad1, coeffs1 = phaseFit(
                         x,
                         yy,
@@ -914,11 +920,21 @@ def calPhaseSmoothness(
                     yyMAD.append(mad1)
                     yyCubic.append(coeffs1[2])
                     yyQuad.append(coeffs1[2])
+                    ksTest.append(getKsTest(xx, yy)[1])
 
                 yySmoothness.append(smooth1)
 
             xxSmoothnessAllInterps.append(xxSmoothness)
             yySmoothnessAllInterps.append(yySmoothness)
+            # if euclid != euclidSame:
+            #     temp = np.where(np.array(euclid) != np.array(euclidSame))
+            #     temp2 = temp[0]
+            #     print(temp2)
+            #     print(euclid[101])
+            #     print(euclidSame[101])
+            #     print(np.array(euclid)[temp2])
+            #     print(np.array(euclidSame)[temp2])
+            #     exit(0)
 
             if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)
@@ -931,8 +947,9 @@ def calPhaseSmoothness(
                 allObsYYCubic.append(yyCubic)
                 allObsXXQuad.append(xxQuad)
                 allObsYYQuad.append(yyQuad)
-                allObsRelDiff.append(relDiff)
                 allObsEuclid.append(euclid)
+                allObsEuclidSame.append(euclidSame)
+                allObsKsTest.append(ksTest)
 
         # Plot for a single observation, the different smoothness for each interpolation
         plotAllInterp(
@@ -1069,19 +1086,6 @@ def calPhaseSmoothness(
     plotSmoothnessAllObs(
         obsids,
         ant,
-        allObsRelDiff,
-        phaseStatsDir,
-        distribution,
-        "both",
-        gridDict,
-        uniqueDict,
-        yAxis="relative difference",
-        name="_reldiff",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
         allObsEuclid,
         phaseStatsDir,
         distribution,
@@ -1090,4 +1094,30 @@ def calPhaseSmoothness(
         uniqueDict,
         yAxis="mean of euclid distance",
         name="_euclid",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsEuclidSame,
+        phaseStatsDir,
+        distribution,
+        "both",
+        gridDict,
+        uniqueDict,
+        yAxis="mean of euclid distance",
+        name="_euclid_same",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsKsTest,
+        phaseStatsDir,
+        distribution,
+        "both",
+        gridDict,
+        uniqueDict,
+        yAxis="p-value",
+        name="_kstest",
     )

@@ -111,6 +111,11 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE norm IN CONFIG FILE")
 
+        if "window" in temp.keys():
+            window = temp["window"]
+        else:
+            sys.exit("PLEASE INCLUDE window IN CONFIG FILE")
+
     return (
         statsDir,
         rmsDir,
@@ -122,6 +127,7 @@ def getDirs(filename):
         stats,
         excludeList,
         distribution,
+        window,
         debug,
         debugObsList,
         debugAntList,
@@ -215,6 +221,7 @@ if __name__ == "__main__":
         stats,
         excludeList,
         distribution,
+        window,
         debug,
         debugObsList,
         debugAntList,
@@ -264,11 +271,11 @@ if __name__ == "__main__":
 
     if stats == "calibration" or stats == "both":
         # Attemp Ridhima's QA pipeline
-        # print("Calibration variance")
-        # calibration.calVar(obsids, varDir, solDir)
-        #
-        # print("Calibration RMS")
-        # calibration.calRMS(obsids, rmsDir, solDir)
+        print("Calibration variance")
+        calibration.calVar(obsids, varDir, solDir)
+
+        print("Calibration RMS")
+        calibration.calRMS(obsids, rmsDir, solDir)
 
         print("AMP SMOOTHNESS")
         calibration.calAmpSmoothness(
@@ -282,6 +289,7 @@ if __name__ == "__main__":
             debugObsList,
             debugAntList,
             norm,
+            window,
         )
 
         print("PHASE SMOOTHNESS")
