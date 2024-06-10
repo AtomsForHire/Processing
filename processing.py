@@ -271,26 +271,26 @@ if __name__ == "__main__":
 
     if stats == "calibration" or stats == "both":
         # Attemp Ridhima's QA pipeline
-        print("Calibration variance")
-        calibration.calVar(obsids, varDir, solDir)
+        # print("Calibration variance")
+        # calibration.calVar(obsids, varDir, solDir)
+        #
+        # print("Calibration RMS")
+        # calibration.calRMS(obsids, rmsDir, solDir)
 
-        print("Calibration RMS")
-        calibration.calRMS(obsids, rmsDir, solDir)
-
-        print("AMP SMOOTHNESS")
-        calibration.calAmpSmoothness(
-            obsids,
-            solDir,
-            smoothDirAmps,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
-            window,
-        )
+        # print("AMP SMOOTHNESS")
+        # calibration.calAmpSmoothness(
+        #     obsids,
+        #     solDir,
+        #     smoothDirAmps,
+        #     distribution,
+        #     gridDict,
+        #     uniqueDict,
+        #     debug,
+        #     debugObsList,
+        #     debugAntList,
+        #     norm,
+        #     window,
+        # )
 
         print("PHASE SMOOTHNESS")
         calibration.calPhaseSmoothness(

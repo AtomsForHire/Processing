@@ -792,6 +792,7 @@ def calPhaseSmoothness(
     allObsYYQuad = list()
     allObsEuclid = list()
     allObsEuclidSame = list()
+    allObsPval = list()
     allObsKsTest = list()
 
     # Loop through observations
@@ -821,6 +822,7 @@ def calPhaseSmoothness(
             yyQuad = list()
             euclid = list()
             euclidSame = list()
+            pVal = list()
             ksTest = list()
 
             # Loop over antennas (Except the last one which is the reference antenna)
@@ -846,6 +848,7 @@ def calPhaseSmoothness(
                     yyQuad.append(np.nan)
                     euclid.append(np.nan)
                     euclidSame.append(np.nan)
+                    pVal.append(np.nan)
                     ksTest.append(np.nan)
                     continue
 
@@ -920,7 +923,9 @@ def calPhaseSmoothness(
                     yyMAD.append(mad1)
                     yyCubic.append(coeffs1[2])
                     yyQuad.append(coeffs1[2])
-                    ksTest.append(getKsTest(xx, yy)[1])
+                    tmp = getKsTest(xx, yy)
+                    pVal.append(tmp[1])
+                    ksTest.append(tmp[0])
 
                 yySmoothness.append(smooth1)
 
@@ -949,6 +954,7 @@ def calPhaseSmoothness(
                 allObsYYQuad.append(yyQuad)
                 allObsEuclid.append(euclid)
                 allObsEuclidSame.append(euclidSame)
+                allObsPval.append(pVal)
                 allObsKsTest.append(ksTest)
 
         # Plot for a single observation, the different smoothness for each interpolation
@@ -1112,12 +1118,25 @@ def calPhaseSmoothness(
     plotSmoothnessAllObs(
         obsids,
         ant,
-        allObsKsTest,
+        allObsPval,
         phaseStatsDir,
         distribution,
         "both",
         gridDict,
         uniqueDict,
         yAxis="p-value",
+        name="_pval",
+    )
+
+    plotSmoothnessAllObs(
+        obsids,
+        ant,
+        allObsKsTest,
+        phaseStatsDir,
+        distribution,
+        "both",
+        gridDict,
+        uniqueDict,
+        yAxis="KS metric",
         name="_kstest",
     )
