@@ -117,6 +117,11 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE window IN CONFIG FILE")
 
+        if "corr_dir" in temp.keys():
+            corrDir = temp["corr_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE corr_dir IN CONFIG FILE")
+
     return (
         statsDir,
         rmsDir,
@@ -125,6 +130,7 @@ def getDirs(filename):
         smoothDirPhase,
         phaseStatsDir,
         solDir,
+        corrDir,
         stats,
         excludeList,
         distribution,
@@ -219,6 +225,7 @@ if __name__ == "__main__":
         smoothDirPhase,
         phaseStatsDir,
         solDir,
+        corrDir,
         stats,
         excludeList,
         distribution,
@@ -234,6 +241,7 @@ if __name__ == "__main__":
     Path(smoothDirAmps).mkdir(parents=True, exist_ok=True)
     Path(smoothDirPhase).mkdir(parents=True, exist_ok=True)
     Path(phaseStatsDir).mkdir(parents=True, exist_ok=True)
+    Path(corrDir).mkdir(parents=True, exist_ok=True)
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
@@ -309,4 +317,11 @@ if __name__ == "__main__":
         )
 
         print("CORRELATION")
-        correlation.crossCorr(xxGainSmoothness, xxPhaseRMSE)
+        correlation.crossCorr(
+            xxGainSmoothness,
+            xxPhaseRMSE,
+            obsids,
+            "xx smoothness",
+            "xx phase RMSE",
+            corrDir,
+        )

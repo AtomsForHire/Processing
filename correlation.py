@@ -1,8 +1,9 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.ma as ma
 
 
-def crossCorr(x, y):
+def crossCorr(x, y, obsids, xLab, yLab, corrDir):
     """Takes two arrays and does cross corelation on them
 
     Parameters
@@ -15,8 +16,15 @@ def crossCorr(x, y):
 
     assert len(x) == len(y), "Length of input arrays not same for crossCor"
 
+    ant = np.arange(0, 128, 1)
     for i in range(0, len(x)):
         xObs = x[i]
         yObs = y[i]
-        test = ma.corrcoef(ma.masked_invalid(xObs), ma.masked_invalid(yObs))
-        print(test)
+
+        plt.scatter(xObs, yObs, c=ant)
+        plt.xlabel(xLab)
+        plt.ylabel(yLab)
+        plt.title(obsids[i])
+        plt.colorbar()
+        plt.savefig(corrDir + "/" + obsids[i] + ".png")
+        plt.clf()
