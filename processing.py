@@ -9,6 +9,7 @@ import yaml
 from astropy.io import fits
 
 import calibration
+import correlation
 import image
 
 
@@ -277,23 +278,23 @@ if __name__ == "__main__":
         # print("Calibration RMS")
         # calibration.calRMS(obsids, rmsDir, solDir)
 
-        # print("AMP SMOOTHNESS")
-        # calibration.calAmpSmoothness(
-        #     obsids,
-        #     solDir,
-        #     smoothDirAmps,
-        #     distribution,
-        #     gridDict,
-        #     uniqueDict,
-        #     debug,
-        #     debugObsList,
-        #     debugAntList,
-        #     norm,
-        #     window,
-        # )
+        print("AMP SMOOTHNESS")
+        xxGainSmoothness, _ = calibration.calAmpSmoothness(
+            obsids,
+            solDir,
+            smoothDirAmps,
+            distribution,
+            gridDict,
+            uniqueDict,
+            debug,
+            debugObsList,
+            debugAntList,
+            norm,
+            window,
+        )
 
         print("PHASE SMOOTHNESS")
-        calibration.calPhaseSmoothness(
+        xxPhaseRMSE, _ = calibration.calPhaseSmoothness(
             obsids,
             solDir,
             smoothDirPhase,
@@ -306,3 +307,6 @@ if __name__ == "__main__":
             debugAntList,
             norm,
         )
+
+        print("CORRELATION")
+        correlation.crossCorr(xxGainSmoothness, xxPhaseRMSE)

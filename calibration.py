@@ -740,6 +740,8 @@ def calAmpSmoothness(
         name=name,
     )
 
+    return allObsXXSmoothness, allObsYYSmoothness
+
 
 def calPhaseSmoothness(
     obsids,
@@ -1140,3 +1142,5 @@ def calPhaseSmoothness(
         yAxis="KS metric",
         name="_kstest",
     )
+
+    return allObsXXRMSE, allObsYYRMSE
