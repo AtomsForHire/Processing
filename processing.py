@@ -122,6 +122,11 @@ def getDirs(filename):
         else:
             sys.exit("PLEASE INCLUDE corr_dir IN CONFIG FILE")
 
+        if "img_dir" in temp.keys():
+            imgDir = temp["img_dir"]
+        else:
+            sys.exit("PLEASE INCLUDE img_dir IN CONFIG FILE")
+
     return (
         statsDir,
         rmsDir,
@@ -130,6 +135,7 @@ def getDirs(filename):
         smoothDirPhase,
         phaseStatsDir,
         solDir,
+        imgDir,
         corrDir,
         stats,
         excludeList,
@@ -225,6 +231,7 @@ if __name__ == "__main__":
         smoothDirPhase,
         phaseStatsDir,
         solDir,
+        imgDir,
         corrDir,
         stats,
         excludeList,
@@ -270,13 +277,19 @@ if __name__ == "__main__":
 
     if stats == "image" or stats == "both":
         # Get RMS for obs
-        rms = image.getRMSVec(statsDir, obsids, distribution, gridDict, uniqueDict)
+        rms = image.getRMSVec(
+            statsDir, obsids, distribution, gridDict, uniqueDict, imgDir
+        )
 
         # Get max for obs
-        max = image.getMaxVec(statsDir, obsids, distribution, gridDict, uniqueDict)
+        max = image.getMaxVec(
+            statsDir, obsids, distribution, gridDict, uniqueDict, imgDir
+        )
 
         # Get DR for obs
-        dr = image.getDRVec(statsDir, obsids, distribution, gridDict, uniqueDict)
+        dr = image.getDRVec(
+            statsDir, obsids, distribution, gridDict, uniqueDict, imgDir
+        )
 
     if stats == "calibration" or stats == "both":
         # Attemp Ridhima's QA pipeline
@@ -287,7 +300,7 @@ if __name__ == "__main__":
         # calibration.calRMS(obsids, rmsDir, solDir)
 
         print("AMP SMOOTHNESS")
-        xxGainSmoothness, _ = calibration.calAmpSmoothness(
+        xxGainSmoothness, yyGainSmoothness = calibration.calAmpSmoothness(
             obsids,
             solDir,
             smoothDirAmps,
@@ -302,18 +315,20 @@ if __name__ == "__main__":
         )
 
         print("PHASE SMOOTHNESS")
-        xxPhaseRMSE, _ = calibration.calPhaseSmoothness(
-            obsids,
-            solDir,
-            smoothDirPhase,
-            phaseStatsDir,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
+        xxPhaseRMSE, yyPhaseRMSE, xxPhaseMAD, yyPhaseMAD, phaseEuclidSame, phaseKs = (
+            calibration.calPhaseSmoothness(
+                obsids,
+                solDir,
+                smoothDirPhase,
+                phaseStatsDir,
+                distribution,
+                gridDict,
+                uniqueDict,
+                debug,
+                debugObsList,
+                debugAntList,
+                norm,
+            )
         )
 
         print("CORRELATION")
@@ -324,4 +339,45 @@ if __name__ == "__main__":
             "xx smoothness",
             "xx phase RMSE",
             corrDir,
+            "_xxRMSE_xxSmooth",
+        )
+
+        correlation.crossCorr(
+            xxGainSmoothness,
+            yyGainSmoothness,
+            obsids,
+            "xx smoothness",
+            "yy smoothness",
+            corrDir,
+            "_yySmooth_xxSmooth",
+        )
+
+        correlation.crossCorr(
+            xxPhaseRMSE,
+            yyPhaseRMSE,
+            obsids,
+            "xx phase RMSE",
+            "yy phase RMSE",
+            corrDir,
+            "_yyRMSE_xxRMSE",
+        )
+
+        correlation.crossCorr(
+            xxPhaseRMSE,
+            xxPhaseMAD,
+            obsids,
+            "xx phase RMSE",
+            "xx phase MAD",
+            corrDir,
+            "_xxMAD_xxRMSE",
+        )
+
+        correlation.crossCorr(
+            phaseEuclidSame,
+            phaseKs,
+            obsids,
+            "phase euclidian distance",
+            "phase KS-metric",
+            corrDir,
+            "_euclid_KS",
         )

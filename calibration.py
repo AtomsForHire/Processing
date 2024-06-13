@@ -563,16 +563,8 @@ def calcSmooth(
 
 
 def getEuclidSame(xx, yy):
-    # print(xx[0:10])
-    # plt.plot(xx, label="xx")
-    # plt.plot(yy, label="yy")
-    # plt.show()
     copy = xx.copy()
     copy -= xx[0] - yy[0]
-    # plt.plot(xx, label="xx")
-    # plt.plot(yy, label="yy")
-    # plt.show()
-    # print(xx[0:10])
 
     return np.abs(np.mean(copy - yy))
 
@@ -582,9 +574,10 @@ def getEuclid(xx, yy):
 
 
 def getKsTest(xx, yy):
-    xx -= xx[0] - yy[0]
-    result = stats.ks_2samp(xx, yy, alternative="two-sided")
-    return (stats.ks_2samp(xx, yy)[0], stats.ks_2samp(xx, yy)[1])
+    copy = xx.copy()
+    copy -= xx[0] - yy[0]
+    result = stats.ks_2samp(copy, yy, alternative="two-sided")
+    return (result[0], result[1])
 
 
 def calAmpSmoothness(
@@ -1143,4 +1136,11 @@ def calPhaseSmoothness(
         name="_kstest",
     )
 
-    return allObsXXRMSE, allObsYYRMSE
+    return (
+        allObsXXRMSE,
+        allObsYYRMSE,
+        allObsXXMAD,
+        allObsYYMAD,
+        allObsEuclidSame,
+        allObsKsTest,
+    )

@@ -4,6 +4,45 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+from astropy.io import fits
+
+
+def calcRMS(filename):
+    """Function to calculate RMS of image FITS file
+
+    Parameters
+    ----------
+    filename: string
+        name of tsv file
+
+    Returns
+    -------
+    rms: float
+        rms of image
+    """
+    hdu = fits.open(filename)
+    data = np.squeeze(hdu[0].data)
+
+    return np.sqrt(np.mean(data**2))
+
+
+def calcMax(filename):
+    """Function to get max value in image FITS file
+
+    Parameters
+    ----------
+    filename: string
+        name of tsv file
+
+    Returns
+    -------
+    max: float
+        max of image
+    """
+    hdu = fits.open(filename)
+    data = np.squeeze(hdu[0].data)
+
+    return np.max(data)
 
 
 def getRMS(filename):
@@ -146,7 +185,7 @@ def gridPlot(obsids, statVec, gridDict, uniqueDict):
     return obs_legend
 
 
-def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict):
+def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     """Function for getting list of rms values per observation
 
     Parameters
@@ -170,16 +209,22 @@ def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict):
     """
     rmsVec = np.zeros(len(obsids))
 
-    for file in os.listdir(directory):
-        if os.path.isfile(file) and file.endswith(".tsv"):
-            obsid = file.split("_")[0]
+    # for file in os.listdir(directory):
+    #     if os.path.isfile(file) and file.endswith(".tsv"):
+    #         obsid = file.split("_")[0]
+    #
+    #         if obsid not in obsids:
+    #             continue
+    #
+    #         rms = getRMS(file)
+    #         rms2 = calcRMS(imgDir + "/" + obsid + "_image_n=10000.fits")
+    #         print(rms, rms2)
+    #
+    #         rmsVec[obsids.index(obsid)] = rms
 
-            if obsid not in obsids:
-                continue
-
-            rms = getRMS(file)
-
-            rmsVec[obsids.index(obsid)] = rms
+    for obs in obsids:
+        rms = calcRMS(imgDir + "/" + obs + "_image_n=10000.fits")
+        rmsVec[obsids.index(obs)] = rms
 
     if distribution == "grid":
         obs_legend = gridPlot(obsids, rmsVec, gridDict, uniqueDict)
@@ -199,7 +244,7 @@ def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict):
     plt.clf()
 
 
-def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict):
+def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     """Function for getting list of max values per observation
 
     Parameters
@@ -223,26 +268,33 @@ def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict):
     """
     maxVec = np.zeros(len(obsids))
 
-    for file in os.listdir(directory):
-        if os.path.isfile(file) and file.endswith(".tsv"):
-            obsid = file.split("_")[0]
-            if obsid not in obsids:
-                continue
-            max = getMax(file)
-
-            maxVec[obsids.index(obsid)] = max
+    # for file in os.listdir(directory):
+    #     if os.path.isfile(file) and file.endswith(".tsv"):
+    #         obsid = file.split("_")[0]
+    #         if obsid not in obsids:
+    #             continue
+    #         max = getMax(file)
+    #         max2 = calcMax(imgDir + obsid + "_image_n=10000.fits")
+    #
+    #         print(max, max2)
+    #
+    #         maxVec[obsids.index(obsid)] = max
+    for obs in obsids:
+        max = calcMax(imgDir + "/" + obs + "_image_n=10000.fits")
+        maxVec[obsids.index(obs)] = max
 
     if distribution == "grid":
         gridPlot(obsids, maxVec, gridDict, uniqueDict)
     elif distribution == "sorted":
         plt.plot(obsids, maxVec)
+
     plt.xticks(rotation=90)
     plt.ylabel("Maximum (Jy/beam)")
     plt.savefig("obs_max.pdf", bbox_inches="tight")
     plt.clf()
 
 
-def getDRVec(directory, obsids, distribution, gridDict, uniqueDict):
+def getDRVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     """Function for getting list of dynamic range values per observation
 
     Parameters
@@ -266,16 +318,23 @@ def getDRVec(directory, obsids, distribution, gridDict, uniqueDict):
     """
     drVec = np.zeros(len(obsids))
 
-    for file in os.listdir(directory):
-        if os.path.isfile(file) and file.endswith(".tsv"):
-            obsid = file.split("_")[0]
-            if obsid not in obsids:
-                continue
-            max = getMax(file)
-            rms = getRMS(file)
-            dr = max / rms
+    # for file in os.listdir(directory):
+    #     if os.path.isfile(file) and file.endswith(".tsv"):
+    #         obsid = file.split("_")[0]
+    #         if obsid not in obsids:
+    #             continue
+    #         max = getMax(file)
+    #         rms = getRMS(file)
+    #         dr = max / rms
+    #
+    #         drVec[obsids.index(obsid)] = dr
 
-            drVec[obsids.index(obsid)] = dr
+    for obs in obsids:
+        rms = calcRMS(imgDir + "/" + obs + "_image_n=10000.fits")
+        max = calcMax(imgDir + "/" + obs + "_image_n=10000.fits")
+        dr = max / rms
+
+        drVec[obsids.index(obs)] = dr
 
     if distribution == "grid":
         gridPlot(obsids, drVec, gridDict, uniqueDict)
