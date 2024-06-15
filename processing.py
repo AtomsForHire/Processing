@@ -219,7 +219,7 @@ def getGridNum(obsids, solDir):
     return gridDict
 
 
-if __name__ == "__main__":
+def main():
     np.set_printoptions(suppress=True, linewidth=np.nan, threshold=np.inf)
     # np.set_printoptions(suppress=True, linewidth=np.nan)
     config = sys.argv[1]
@@ -381,3 +381,7 @@ if __name__ == "__main__":
             corrDir,
             "_euclid_KS",
         )
+
+
+if __name__ == "__main__":
+    main()
