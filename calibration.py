@@ -469,10 +469,10 @@ def phaseFit(x, y, interp_type, obs, ant, norm, debug, debugTargetObs, debugTarg
                     print("MAD: ", mad)
                     plt.show()
 
-    if norm:
-        if ant == 127:
-            rmse = np.nan
-            mad = np.nan
+    # if norm:
+    #     if ant == 127:
+    #         rmse = np.nan
+    #         mad = np.nan
 
     return (
         rmse,
@@ -532,8 +532,8 @@ def calcSmooth(
 
     # If we are looking at normalised calibration solutions then return
     # immediately when we are reference antenna
-    if norm and ant == 127:
-        return 0
+    # if norm and ant == 127:
+    #     return 0
 
     # Check if we are doing phase calibrations
     if len(yimag) == 1:
@@ -830,7 +830,7 @@ def calPhaseSmoothness(
                 xx = movePhases(xx)
 
                 # Skip flagged antennas
-                if np.nansum(xx) == 0.0:
+                if np.nansum(xx) == 0.0 or (normalise and j == 127):
                     xxSmoothness.append(np.nan)
                     yySmoothness.append(np.nan)
                     xxRMSE.append(np.nan)
@@ -926,15 +926,6 @@ def calPhaseSmoothness(
 
             xxSmoothnessAllInterps.append(xxSmoothness)
             yySmoothnessAllInterps.append(yySmoothness)
-            # if euclid != euclidSame:
-            #     temp = np.where(np.array(euclid) != np.array(euclidSame))
-            #     temp2 = temp[0]
-            #     print(temp2)
-            #     print(euclid[101])
-            #     print(euclidSame[101])
-            #     print(np.array(euclid)[temp2])
-            #     print(np.array(euclidSame)[temp2])
-            #     exit(0)
 
             if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)

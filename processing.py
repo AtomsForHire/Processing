@@ -332,46 +332,51 @@ def main():
         )
 
         print("CORRELATION")
-        correlation.crossCorr(
-            xxGainSmoothness,
-            xxPhaseRMSE,
-            obsids,
-            "xx smoothness",
-            "xx phase RMSE",
-            corrDir,
-            "_xxRMSE_xxSmooth",
-        )
+        # print("XX RMSE VS XX SMOOTH")
+        # correlation.crossCorr(
+        #     xxGainSmoothness,
+        #     xxPhaseRMSE,
+        #     obsids,
+        #     "xx smoothness",
+        #     "xx phase RMSE",
+        #     corrDir,
+        #     "_xxRMSE_xxSmooth",
+        # )
+        #
+        # print("XX SMOOTH VS XX SMMOTH")
+        # correlation.crossCorr(
+        #     xxGainSmoothness,
+        #     yyGainSmoothness,
+        #     obsids,
+        #     "xx smoothness",
+        #     "yy smoothness",
+        #     corrDir,
+        #     "_yySmooth_xxSmooth",
+        # )
+        #
+        # print("YY RMSE VS XX RMSE")
+        # correlation.crossCorr(
+        #     xxPhaseRMSE,
+        #     yyPhaseRMSE,
+        #     obsids,
+        #     "xx phase RMSE",
+        #     "yy phase RMSE",
+        #     corrDir,
+        #     "_yyRMSE_xxRMSE",
+        # )
+        #
+        # print("XX MAD VS XX RMSE")
+        # correlation.crossCorr(
+        #     xxPhaseRMSE,
+        #     xxPhaseMAD,
+        #     obsids,
+        #     "xx phase RMSE",
+        #     "xx phase MAD",
+        #     corrDir,
+        #     "_xxMAD_xxRMSE",
+        # )
 
-        correlation.crossCorr(
-            xxGainSmoothness,
-            yyGainSmoothness,
-            obsids,
-            "xx smoothness",
-            "yy smoothness",
-            corrDir,
-            "_yySmooth_xxSmooth",
-        )
-
-        correlation.crossCorr(
-            xxPhaseRMSE,
-            yyPhaseRMSE,
-            obsids,
-            "xx phase RMSE",
-            "yy phase RMSE",
-            corrDir,
-            "_yyRMSE_xxRMSE",
-        )
-
-        correlation.crossCorr(
-            xxPhaseRMSE,
-            xxPhaseMAD,
-            obsids,
-            "xx phase RMSE",
-            "xx phase MAD",
-            corrDir,
-            "_xxMAD_xxRMSE",
-        )
-
+        print("EUCLID VS KS")
         correlation.crossCorr(
             phaseEuclidSame,
             phaseKs,
