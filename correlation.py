@@ -7,8 +7,21 @@ from scipy import stats
 from scipy.stats import linregress
 from tqdm import tqdm
 
+import image
 
-def crossCorr(x, y, obsids, xLab, yLab, corrDir, nameExtension=""):
+
+def crossCorr(
+    x,
+    y,
+    obsids,
+    xLab,
+    yLab,
+    distribution,
+    gridDict,
+    uniqueDict,
+    corrDir,
+    nameExtension="",
+):
     """Takes two arrays and does cross corelation on them
 
     Parameters
@@ -42,6 +55,11 @@ def crossCorr(x, y, obsids, xLab, yLab, corrDir, nameExtension=""):
     bounds = np.linspace(0, 127, 128)
     norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N)
 
+    # Store stats for each observation
+    pearsonStats = np.zeros(len(obsids))
+    gradientStats = np.zeros(len(obsids))
+    rValStats = np.zeros(len(obsids))
+
     # Loop over observations
     for i in tqdm(range(0, len(x))):
         ant = np.arange(0, 128, 1)
@@ -70,16 +88,22 @@ def crossCorr(x, y, obsids, xLab, yLab, corrDir, nameExtension=""):
         # Calculate the pearson coefficient
         # xx, yy = linearFit.linspace()
         R = ma.corrcoef(ma.masked_invalid(xObs), ma.masked_invalid(yObs))
+
+        # Store values
+        pearsonStats[i] = R[0, 1]
+        gradientStats[i] = slope
+        rValStats[i] = r_value
+
         plt.scatter(xObs, yObs, c=ant, cmap=cmap, norm=norm)
         # plt.plot(xx, yy)
         plt.plot(
             xObs[~np.isnan(xObs)],
             regression_line,
-            label="m=" + str(slope) + ", r=" + str(r_value),
+            label="m=" + str(round(slope, 4)) + ", r=" + str(round(r_value, 4)),
         )
         plt.xlabel(xLab)
         plt.ylabel(yLab)
-        plt.title(obsids[i] + " " + str(R[0, 1]))
+        plt.title(obsids[i] + " C=" + str(round(R[0, 1], 2)))
         plt.colorbar()
         plt.legend()
         plt.xticks(rotation=45)
@@ -88,3 +112,26 @@ def crossCorr(x, y, obsids, xLab, yLab, corrDir, nameExtension=""):
             corrDir + "/" + obsids[i] + nameExtension + ".png", bbox_inches="tight"
         )
         plt.clf()
+
+    # Plot statistics as function of observation, and group by grid number
+    if distribution == "grid":
+        image.gridPlot(obsids, pearsonStats, gridDict, uniqueDict)
+        plt.xticks(rotation=90)
+        plt.ylabel("Pearson coefficient")
+        plt.savefig(
+            corrDir + "/all" + nameExtension + "_pearson.png", bbox_inches="tight"
+        )
+        plt.clf()
+        image.gridPlot(obsids, gradientStats, gridDict, uniqueDict)
+        plt.xticks(rotation=90)
+        plt.ylabel("Gradient of LOBF")
+        plt.savefig(corrDir + "/all" + nameExtension + "_grad.png", bbox_inches="tight")
+        plt.clf()
+        image.gridPlot(obsids, rValStats, gridDict, uniqueDict)
+        plt.xticks(rotation=90)
+        plt.ylabel("r-value")
+        plt.savefig(corrDir + "/all" + nameExtension + "_rval.png", bbox_inches="tight")
+        plt.clf()
+    elif distribution == "sorted":
+        pass
+        # plt.plot(obsids, drVec)

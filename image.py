@@ -133,7 +133,7 @@ def gridPlot(obsids, statVec, gridDict, uniqueDict):
 
     Returns
     -------
-    None
+    obs_legend
 
     -------
     """

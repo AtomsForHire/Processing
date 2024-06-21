@@ -332,49 +332,61 @@ def main():
         )
 
         print("CORRELATION")
-        # print("XX RMSE VS XX SMOOTH")
-        # correlation.crossCorr(
-        #     xxGainSmoothness,
-        #     xxPhaseRMSE,
-        #     obsids,
-        #     "xx smoothness",
-        #     "xx phase RMSE",
-        #     corrDir,
-        #     "_xxRMSE_xxSmooth",
-        # )
-        #
-        # print("XX SMOOTH VS XX SMMOTH")
-        # correlation.crossCorr(
-        #     xxGainSmoothness,
-        #     yyGainSmoothness,
-        #     obsids,
-        #     "xx smoothness",
-        #     "yy smoothness",
-        #     corrDir,
-        #     "_yySmooth_xxSmooth",
-        # )
-        #
-        # print("YY RMSE VS XX RMSE")
-        # correlation.crossCorr(
-        #     xxPhaseRMSE,
-        #     yyPhaseRMSE,
-        #     obsids,
-        #     "xx phase RMSE",
-        #     "yy phase RMSE",
-        #     corrDir,
-        #     "_yyRMSE_xxRMSE",
-        # )
-        #
-        # print("XX MAD VS XX RMSE")
-        # correlation.crossCorr(
-        #     xxPhaseRMSE,
-        #     xxPhaseMAD,
-        #     obsids,
-        #     "xx phase RMSE",
-        #     "xx phase MAD",
-        #     corrDir,
-        #     "_xxMAD_xxRMSE",
-        # )
+        print("XX RMSE VS XX SMOOTH")
+        correlation.crossCorr(
+            xxGainSmoothness,
+            xxPhaseRMSE,
+            obsids,
+            "xx smoothness",
+            "xx phase RMSE",
+            distribution,
+            gridDict,
+            uniqueDict,
+            corrDir,
+            "_xxRMSE_xxSmooth",
+        )
+
+        print("XX SMOOTH VS XX SMMOTH")
+        correlation.crossCorr(
+            xxGainSmoothness,
+            yyGainSmoothness,
+            obsids,
+            "xx smoothness",
+            "yy smoothness",
+            distribution,
+            gridDict,
+            uniqueDict,
+            corrDir,
+            "_yySmooth_xxSmooth",
+        )
+
+        print("YY RMSE VS XX RMSE")
+        correlation.crossCorr(
+            xxPhaseRMSE,
+            yyPhaseRMSE,
+            obsids,
+            "xx phase RMSE",
+            "yy phase RMSE",
+            distribution,
+            gridDict,
+            uniqueDict,
+            corrDir,
+            "_yyRMSE_xxRMSE",
+        )
+
+        print("XX MAD VS XX RMSE")
+        correlation.crossCorr(
+            xxPhaseRMSE,
+            xxPhaseMAD,
+            obsids,
+            "xx phase RMSE",
+            "xx phase MAD",
+            distribution,
+            gridDict,
+            uniqueDict,
+            corrDir,
+            "_xxMAD_xxRMSE",
+        )
 
         print("EUCLID VS KS")
         correlation.crossCorr(
@@ -383,6 +395,9 @@ def main():
             obsids,
             "phase euclidian distance",
             "phase KS-metric",
+            distribution,
+            gridDict,
+            uniqueDict,
             corrDir,
             "_euclid_KS",
         )
