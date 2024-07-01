@@ -10,7 +10,75 @@ from tqdm import tqdm
 import image
 
 
-def crossCorr(
+def crossCorrAcrossObs(
+    x,
+    y,
+    obsids,
+    xLab,
+    yLab,
+    distribution,
+    gridDict,
+    uniqueDict,
+    corrDir,
+    nameExtension="",
+):
+    assert len(x) == len(y), "Length of input arrays not same for crossCor"
+
+    # Store stats for each observation
+    pearsonStats = np.zeros(len(obsids))
+    gradientStats = np.zeros(len(obsids))
+    rValStats = np.zeros(len(obsids))
+
+    xObs = np.array(x)
+    yObs = np.array(y)
+    # yObs = yObs[xObs < 60]
+    # ant = ant[xObs < 60]
+    # xObs = xObs[xObs < 60]
+
+    assert np.all(
+        np.isnan(xObs) == np.isnan(yObs)
+    ), f"Arrays are not for the same observation! {len(xObs)} {len(yObs)}"
+
+    # linearFit = Polynomial.fit(
+    #     xObs[~np.isnan(xObs)],
+    #     yObs[~np.isnan(yObs)],
+    #     deg=1,
+    #     domain=[min(xObs[~np.isnan(xObs)]), max(xObs[~np.isnan(xObs)])],
+    #     window=[min(xObs[~np.isnan(xObs)]), max(xObs[~np.isnan(xObs)])],
+    # )
+    slope, intercept, r_value, p_value, std_err = linregress(
+        xObs[~np.isnan(xObs)], yObs[~np.isnan(yObs)]
+    )
+    regression_line = slope * xObs[~np.isnan(xObs)] + intercept
+
+    # Calculate the pearson coefficient
+    # xx, yy = linearFit.linspace()
+    R = ma.corrcoef(ma.masked_invalid(xObs), ma.masked_invalid(yObs))
+
+    # Store values
+    pearsonStats = R[0, 1]
+    gradientStats = slope
+    rValStats = r_value
+
+    plt.scatter(xObs, yObs)
+    # plt.plot(xx, yy)
+    plt.plot(
+        xObs[~np.isnan(xObs)],
+        regression_line,
+        label="m=" + str(round(slope, 4)) + ", r=" + str(round(r_value, 4)),
+    )
+    plt.xlabel(xLab)
+    plt.ylabel(yLab)
+    plt.title("C=" + str(round(R[0, 1], 2)))
+    plt.colorbar()
+    plt.legend()
+    plt.xticks(rotation=45)
+
+    plt.savefig(corrDir + "/" + nameExtension + ".png", bbox_inches="tight")
+    plt.clf()
+
+
+def crossCorrAcrossAnt(
     x,
     y,
     obsids,
@@ -71,7 +139,7 @@ def crossCorr(
 
         assert np.all(
             np.isnan(xObs) == np.isnan(yObs)
-        ), "Arrays are not for the same observation!"
+        ), f"Arrays are not for the same observation! {len(xObs)} {len(yObs)}"
 
         # linearFit = Polynomial.fit(
         #     xObs[~np.isnan(xObs)],

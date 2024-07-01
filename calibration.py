@@ -622,6 +622,8 @@ def calAmpSmoothness(
     interps = ["zero", "linear"]
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
+    allXXAvgSmooth = list()
+    allYYAvgSmooth = list()
     for i in tqdm(range(0, len(obsids))):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
@@ -697,6 +699,8 @@ def calAmpSmoothness(
             if interp_type == "linear":
                 allObsXXSmoothness.append(xxSmoothness)
                 allObsYYSmoothness.append(yySmoothness)
+                allXXAvgSmooth.append(np.nanmean(xxSmoothness))
+                allYYAvgSmooth.append(np.nanmean(yySmoothness))
 
         # Plot for a single observation, the different smoothness for each interpolation
         plotAllInterp(
@@ -733,7 +737,7 @@ def calAmpSmoothness(
         name=name,
     )
 
-    return allObsXXSmoothness, allObsYYSmoothness
+    return allObsXXSmoothness, allObsYYSmoothness, allXXAvgSmooth, allYYAvgSmooth
 
 
 def calPhaseSmoothness(
@@ -748,6 +752,7 @@ def calPhaseSmoothness(
     debugTargetObs,
     debugTargetAnt,
     normalise,
+    useWindow=False,
 ):
     """Function for calculating smoothness of calibration phase amplitudes for all obs
 
@@ -802,6 +807,11 @@ def calPhaseSmoothness(
         xxSmoothnessAllInterps = list()
         yySmoothnessAllInterps = list()
 
+        if useWindow is True:
+            window = signal.windows.blackmanharris(nFreq)
+        else:
+            window = np.ones(nFreq)
+
         # Loop through interpolation types
         for interp_type in interps:
             xxSmoothness = list()
@@ -828,6 +838,7 @@ def calPhaseSmoothness(
                 xx = cal.phases[0, j, :, 0].copy()
                 # Normalise all angles to sit between [0, 360]
                 xx = movePhases(xx)
+                xx *= window
 
                 # Skip flagged antennas
                 if np.nansum(xx) == 0.0 or (normalise and j == 127):
@@ -885,6 +896,7 @@ def calPhaseSmoothness(
                 yyOld = cal.phases[0, j, :, 3].copy()
                 yy = cal.phases[0, j, :, 3]
                 yy = movePhases(yy)
+                yy *= window
 
                 smooth1 = calcSmooth(
                     x,

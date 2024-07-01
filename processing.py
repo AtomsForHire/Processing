@@ -275,32 +275,25 @@ def main():
         f"{bcolors.OKBLUE}UNIQUE GRIDNUMS AND FREQUENCY {bcolors.ENDC}: {len(uniqueDict)} {uniqueDict}"
     )
 
-    if stats == "image" or stats == "both":
-        # Get RMS for obs
-        rms = image.getRMSVec(
-            statsDir, obsids, distribution, gridDict, uniqueDict, imgDir
-        )
+    # Get RMS for obs
+    rms = image.getRMSVec(statsDir, obsids, distribution, gridDict, uniqueDict, imgDir)
 
-        # Get max for obs
-        max = image.getMaxVec(
-            statsDir, obsids, distribution, gridDict, uniqueDict, imgDir
-        )
+    # Get max for obs
+    max = image.getMaxVec(statsDir, obsids, distribution, gridDict, uniqueDict, imgDir)
 
-        # Get DR for obs
-        dr = image.getDRVec(
-            statsDir, obsids, distribution, gridDict, uniqueDict, imgDir
-        )
+    # Get DR for obs
+    dr = image.getDRVec(statsDir, obsids, distribution, gridDict, uniqueDict, imgDir)
 
-    if stats == "calibration" or stats == "both":
-        # Attemp Ridhima's QA pipeline
-        # print("Calibration variance")
-        # calibration.calVar(obsids, varDir, solDir)
-        #
-        # print("Calibration RMS")
-        # calibration.calRMS(obsids, rmsDir, solDir)
+    # Attemp Ridhima's QA pipeline
+    # print("Calibration variance")
+    # calibration.calVar(obsids, varDir, solDir)
+    #
+    # print("Calibration RMS")
+    # calibration.calRMS(obsids, rmsDir, solDir)
 
-        print("AMP SMOOTHNESS")
-        xxGainSmoothness, yyGainSmoothness = calibration.calAmpSmoothness(
+    print("AMP SMOOTHNESS")
+    xxGainSmoothness, yyGainSmoothness, xxAvgSmoothness, yyAvgSmoothness = (
+        calibration.calAmpSmoothness(
             obsids,
             solDir,
             smoothDirAmps,
@@ -313,94 +306,138 @@ def main():
             norm,
             window,
         )
+    )
 
-        print("PHASE SMOOTHNESS")
-        xxPhaseRMSE, yyPhaseRMSE, xxPhaseMAD, yyPhaseMAD, phaseEuclidSame, phaseKs = (
-            calibration.calPhaseSmoothness(
-                obsids,
-                solDir,
-                smoothDirPhase,
-                phaseStatsDir,
-                distribution,
-                gridDict,
-                uniqueDict,
-                debug,
-                debugObsList,
-                debugAntList,
-                norm,
-            )
-        )
-
-        print("CORRELATION")
-        print("XX RMSE VS XX SMOOTH")
-        correlation.crossCorr(
-            xxGainSmoothness,
-            xxPhaseRMSE,
+    print("PHASE SMOOTHNESS")
+    xxPhaseRMSE, yyPhaseRMSE, xxPhaseMAD, yyPhaseMAD, phaseEuclidSame, phaseKs = (
+        calibration.calPhaseSmoothness(
             obsids,
-            "xx smoothness",
-            "xx phase RMSE",
+            solDir,
+            smoothDirPhase,
+            phaseStatsDir,
             distribution,
             gridDict,
             uniqueDict,
-            corrDir,
-            "_xxRMSE_xxSmooth",
+            debug,
+            debugObsList,
+            debugAntList,
+            norm,
+            useWindow=True,
         )
+    )
 
-        print("XX SMOOTH VS XX SMMOTH")
-        correlation.crossCorr(
-            xxGainSmoothness,
-            yyGainSmoothness,
-            obsids,
-            "xx smoothness",
-            "yy smoothness",
-            distribution,
-            gridDict,
-            uniqueDict,
-            corrDir,
-            "_yySmooth_xxSmooth",
-        )
+    print("CORRELATION")
+    print("XX RMSE VS XX SMOOTH")
+    correlation.crossCorrAcrossAnt(
+        xxGainSmoothness,
+        xxPhaseRMSE,
+        obsids,
+        "xx smoothness",
+        "xx phase RMSE",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "_xxRMSE_xxSmooth",
+    )
 
-        print("YY RMSE VS XX RMSE")
-        correlation.crossCorr(
-            xxPhaseRMSE,
-            yyPhaseRMSE,
-            obsids,
-            "xx phase RMSE",
-            "yy phase RMSE",
-            distribution,
-            gridDict,
-            uniqueDict,
-            corrDir,
-            "_yyRMSE_xxRMSE",
-        )
+    print("XX SMOOTH VS XX SMMOTH")
+    correlation.crossCorrAcrossAnt(
+        xxGainSmoothness,
+        yyGainSmoothness,
+        obsids,
+        "xx smoothness",
+        "yy smoothness",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "_yySmooth_xxSmooth",
+    )
 
-        print("XX MAD VS XX RMSE")
-        correlation.crossCorr(
-            xxPhaseRMSE,
-            xxPhaseMAD,
-            obsids,
-            "xx phase RMSE",
-            "xx phase MAD",
-            distribution,
-            gridDict,
-            uniqueDict,
-            corrDir,
-            "_xxMAD_xxRMSE",
-        )
+    print("YY RMSE VS XX RMSE")
+    correlation.crossCorrAcrossAnt(
+        xxPhaseRMSE,
+        yyPhaseRMSE,
+        obsids,
+        "xx phase RMSE",
+        "yy phase RMSE",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "_yyRMSE_xxRMSE",
+    )
 
-        print("EUCLID VS KS")
-        correlation.crossCorr(
-            phaseEuclidSame,
-            phaseKs,
-            obsids,
-            "phase euclidian distance",
-            "phase KS-metric",
-            distribution,
-            gridDict,
-            uniqueDict,
-            corrDir,
-            "_euclid_KS",
-        )
+    print("XX MAD VS XX RMSE")
+    correlation.crossCorrAcrossAnt(
+        xxPhaseRMSE,
+        xxPhaseMAD,
+        obsids,
+        "xx phase RMSE",
+        "xx phase MAD",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "_xxMAD_xxRMSE",
+    )
+
+    print("EUCLID VS KS")
+    correlation.crossCorrAcrossAnt(
+        phaseEuclidSame,
+        phaseKs,
+        obsids,
+        "phase euclidian distance",
+        "phase KS-metric",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "_euclid_KS",
+    )
+
+    print("IMAGE RMS VS GAIN SMOOTHNESS")
+    correlation.crossCorrAcrossObs(
+        rms,
+        xxAvgSmoothness,
+        obsids,
+        "Image RMS",
+        "XX Average Smoothness",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "xxSmooth_rms",
+    )
+
+    print("IMAGE DR VS GAIN SMOOTHNESS")
+    correlation.crossCorrAcrossObs(
+        dr,
+        xxAvgSmoothness,
+        obsids,
+        "Image Dynamic Range",
+        "XX Average Smoothness",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "xxSmooth_dr",
+    )
+
+    # print("IMAGE RMS VS XX PHASE RMSE")
+    # correlation.crossCorrAcrossObs(
+    #     rms,
+    #     xx,
+    #     obsids,
+    #     "Image Dynamic Range",
+    #     "XX Average Smoothness",
+    #     distribution,
+    #     gridDict,
+    #     uniqueDict,
+    #     corrDir,
+    #     "xxSmooth_dr",
+    # )
 
 
 if __name__ == "__main__":

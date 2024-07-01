@@ -243,6 +243,8 @@ def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
         plt.savefig("obs_rms.pdf", bbox_inches="tight")
     plt.clf()
 
+    return rmsVec
+
 
 def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     """Function for getting list of max values per observation
@@ -292,6 +294,8 @@ def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     plt.ylabel("Maximum (Jy/beam)")
     plt.savefig("obs_max.pdf", bbox_inches="tight")
     plt.clf()
+
+    return maxVec
 
 
 def getDRVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
@@ -345,3 +349,5 @@ def getDRVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     plt.ylabel("Dynamic Range (max/rms)")
     plt.savefig("obs_dynamic_range.pdf", bbox_inches="tight")
     plt.clf()
+
+    return drVec
