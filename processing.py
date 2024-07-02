@@ -397,7 +397,7 @@ def main():
         "_euclid_KS",
     )
 
-    print("IMAGE RMS VS GAIN SMOOTHNESS")
+    print("IMAGE RMS VS XX GAIN SMOOTHNESS")
     correlation.crossCorrAcrossObs(
         rms,
         xxAvgSmoothness,
@@ -409,6 +409,20 @@ def main():
         uniqueDict,
         corrDir,
         "xxSmooth_rms",
+    )
+
+    print("IMAGE RMS VS YY GAIN SMOOTHNESS")
+    correlation.crossCorrAcrossObs(
+        rms,
+        yyAvgSmoothness,
+        obsids,
+        "Image RMS",
+        "YY Average Smoothness",
+        distribution,
+        gridDict,
+        uniqueDict,
+        corrDir,
+        "yySmooth_rms",
     )
 
     print("IMAGE DR VS GAIN SMOOTHNESS")
