@@ -60,6 +60,7 @@ def crossCorrAcrossObs(
     gradientStats = slope
     rValStats = r_value
 
+    # Saving figure
     plt.scatter(xObs, yObs)
     # plt.plot(xx, yy)
     plt.plot(
@@ -76,6 +77,10 @@ def crossCorrAcrossObs(
 
     plt.savefig(corrDir + "/" + nameExtension + ".png", bbox_inches="tight")
     plt.clf()
+
+    # Save pearson correlation number
+    with open(corrDir + "/" + nameExtension + ".txt", "w") as f:
+        f.write(str(pearsonStats))
 
 
 def crossCorrAcrossAnt(
@@ -94,20 +99,24 @@ def crossCorrAcrossAnt(
 
     Parameters
     ----------
-    x:  list
+    - x:  `list`
         This should be a list of some statistic for all observations at each antenna
-    y:  list
+    - y:  `list`
         Same thing as x
-    obsids: list
+    - obsids: `list`
         List of obsids
-    xLab: string
+    - xLab: `string`
         x label string
-    yLab: string
+    - yLab: `string`
         y label string
-    corrDir: string
+    - corrDir: `string`
         directory to save files
-    nameExtension: string
+    - nameExtension: `string`
         name to add onto end of file
+
+    Returns
+    -------
+    None
     """
 
     assert len(x) == len(y), "Length of input arrays not same for crossCor"
@@ -202,4 +211,3 @@ def crossCorrAcrossAnt(
         plt.clf()
     elif distribution == "sorted":
         pass
-        # plt.plot(obsids, drVec)
