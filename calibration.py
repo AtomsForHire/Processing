@@ -15,11 +15,11 @@ def calVar(obsids, varDir, solDir):
 
     Parameters
     ----------
-    obsids: list
+    - obsids: `list`
         List of observation ids
-    varDir: string
+    - varDir: `string`
         Path to save results to
-    solDir: string
+    - solDir: `string`
         Path to directory containing solutions/metafits
     """
 
@@ -53,11 +53,11 @@ def calRMS(obsids, rmsDir, solDir):
 
     Parameters
     ----------
-    obsids: list
+    - obsids: `list`
         List of observation ids
-    varDir: string
+    - varDir: `string`
         Path to save results to
-    solDir: string
+    - solDir: `string`
         Path to directory containing solutions/metafits
     """
     for i in tqdm(range(0, len(obsids))):
@@ -84,14 +84,14 @@ def nan_helper(y):
 
     Parameters
     ----------
-    y: numpy array
+    - y: `numpy` array
         1d numpy array with possible NaNs
 
     Returns
     -------
-    nans: numpy array
+    - nans: `numpy` array
         logical indices of NaNs
-    index: numpy array
+    - index: `numpy` array
         a function, with signature indices= index(logical_indices),
         to convert logical indices of NaNs to 'equivalent' indices
 
@@ -191,23 +191,23 @@ def plotSmoothnessAllObs(
 
     Parameters
     ----------
-    obsids: list
+    - obsids: `list`
         List of observation ids
-    ant: list
+    - ant: `list`
         List of antenna numbers
-    smoothness: list[list]
+    - smoothness: `list`[list]
         List of list of all smoothness values across all antennas for all obs
-    smoothDir: string
+    - smoothDir: `string`
         Path to save results to
-    distribution: string
+    - distribution: `string`
         How the obs are sorted
-    pol: string
+    - pol: `string`
         String for naming files properly
-    gridDict: dictionary
+    - gridDict: `dictionary`
         Dictionary where keys are obs ids and values are their grid number
-    uniqueDict: dictionary
+    - uniqueDict: `dictionary`
         Dictionary of unique grid numbers and how often they occur
-    rmse: bool
+    - rmse: `bool`
         Save using rmse settings or not, False by default so it doesn't break
         original calls
 
@@ -316,17 +316,17 @@ def plotDebug(old, yreal, yimag, y, yf, obs, ant):
 
     Parameters
     ----------
-    old: array
+    - old: `array`
         Contains the real and imaginary parts of the original calibration solutions
-    yreal: array/int
+    - yreal: `array`/int
         Interpolated real part of the original calibration sol
-    yimag: array
+    - yimag: `array`
         Same as above but for imaginary
-    yf: array
+    - yf: `array`
         Fourier transformed yreal + 1j*yimag
-    obs: string
+    - obs: `string`
         String for observation id
-    ant: integer
+    - ant: `integer`
         antenna number
 
     Returns
@@ -370,12 +370,12 @@ def movePhases(phases):
 
     Parameters
     ----------
-    phases: array
+    - phases: `array`
         array of phases to process
 
     Returns
     -------
-    phases: array
+    - phases: `array`
         modified phases
     """
 
@@ -499,32 +499,32 @@ def calcSmooth(
 
     Parameters
     ----------
-    x: array
+    - x: `array`
         contains antenna numbers
-    old: array
+    - old: `array`
         contains the original calibration solutions for debugging purposes
-    yreal: array
+    - yreal: `array`
         non-interpolated real part of the calibration solutions
-    yimag: array
+    - yimag: `array`
         non-interpolated imaginary part of the calibratio solutions
-    interp_type: string
+    - interp_type: `string`
         interpolation method used
-    obs: string
+    - obs: `string`
         observation id
-    ant: int
+    - ant: `int`
         antenna number
-    norm: bool
+    - norm: `bool`
         if using the normalise calibrations then skip antenna 127
-    debug: bool
+    - debug: `bool`
         print and plot debug stuff
-    debugTargetObs: list
+    - debugTargetObs: `list`
         list of target observations for debugging
-    debugTargetAnt: list
+    - debugTargetAnt: `list`
         list of target antennas for debugging
 
     Returns
     -------
-    smooth: float
+    - smooth: `float`
         a value representing the smoothness of the calibration solutions
 
     -------
@@ -758,17 +758,17 @@ def calPhaseSmoothness(
 
     Parameters
     ----------
-    obsids: list
+    - obsids: `list`
         List of observation ids
-    smoothDir: string
+    - smoothDir: `string`
         Path to save results to
-    distribution: string
+    - distribution: `string`
         How the obs are sorted
-    gridDict: dictionary
+    - gridDict: `dictionary`
         Dictionary where keys are obs ids and values are their grid number
-    uniqueDict: dictionary
+    - uniqueDict: `dictionary`
         Dictionary of unique grid numbers and how often they occur
-    normalise: bool
+    - normalise: `bool`
         True or False, enable or disable normalisation
 
     Returns
