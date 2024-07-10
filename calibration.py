@@ -5,6 +5,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from mwa_qa import cal_metrics, read_calfits
+from numba import jit, njit
 from numpy.polynomial import Polynomial
 from scipy import signal, stats
 from tqdm import tqdm
@@ -78,6 +79,7 @@ def calRMS(obsids, rmsDir, solDir):
         plt.clf()
 
 
+@njit
 def nan_helper(y):
     # https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
     """Helper to handle indices and logical indices of NaNs.
@@ -107,21 +109,22 @@ def nan_helper(y):
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 
+@njit(cache=True)
 def interpChoices(x, y, interp_type):
     """Function for interpolating with different styles
 
     Parameters
     ----------
-    x: list
+    - x: `list`
         x axis
-    y: list
+    - y: `list`
         y axis
-    interp_type: string
+    - interp_type: `string`
         Choice of interpolation
 
     Returns
     -------
-    y: list
+    - y: `list`
         Interpolated function
 
     -------
@@ -133,13 +136,13 @@ def interpChoices(x, y, interp_type):
     if interp_type == "zero":
         y = np.array([0 if math.isnan(x) else x for x in y])
 
-    if interp_type == "cspline":
-        nans = np.isnan(y)
-        x_interp = x[~nans]
-        y_interp = y[~nans]
-        cs = sci.interpolate.CubicSpline(x_interp, y_interp)
-        y_missing = cs(x[nans])
-        y[nans] = y_missing
+    # if interp_type == "cspline":
+    #     nans = np.isnan(y)
+    #     x_interp = x[~nans]
+    #     y_interp = y[~nans]
+    #     cs = sci.interpolate.CubicSpline(x_interp, y_interp)
+    #     y_missing = cs(x[nans])
+    #     y[nans] = y_missing
 
     return y
 
@@ -365,6 +368,7 @@ def plotDebug(old, yreal, yimag, y, yf, obs, ant):
         plt.show()
 
 
+@njit(cache=True)
 def movePhases(phases):
     """Function to make phases not wrap
 
@@ -402,14 +406,14 @@ def phaseFit(x, y, interp_type, obs, ant, norm, debug, debugTargetObs, debugTarg
 
     Parameters
     ----------
-    x: array
+    - x: `array`
         frequency array
-    y: array
+    - y: `array`
         phase solutions
 
     Returns
     -------
-    rmse: float
+    - rmse: `float`
         root mean squared error
 
     """
@@ -562,6 +566,7 @@ def calcSmooth(
     return smooth
 
 
+@njit(cache=True)
 def getEuclidSame(xx, yy):
     copy = xx.copy()
     copy -= xx[0] - yy[0]
@@ -569,6 +574,7 @@ def getEuclidSame(xx, yy):
     return np.abs(np.mean(copy - yy))
 
 
+@njit(cache=True)
 def getEuclid(xx, yy):
     return np.abs(np.mean(xx - yy))
 
@@ -597,17 +603,17 @@ def calAmpSmoothness(
 
     Parameters
     ----------
-    obsids: list
+    - obsids: `list`
         List of observation ids
-    smoothDir: string
+    - smoothDir: `string`
         Path to save results to
-    distribution: string
+    - distribution: `string`
         How the obs are sorted
-    gridDict: dictionary
+    - gridDict: `dictionary`
         Dictionary where keys are obs ids and values are their grid number
-    uniqueDict: dictionary
+    - uniqueDict: `dictionary`
         Dictionary of unique grid numbers and how often they occur
-    normalise: bool
+    - normalise: `bool`
         True or False, enable or disable normalisation
 
     Returns
