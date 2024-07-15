@@ -719,29 +719,29 @@ def calAmpSmoothness(
         name = ""
 
     # Save figure for all obsids XX
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXSmoothness,
-        smoothDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-        name=name,
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYSmoothness,
-        smoothDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-        name=name,
-    )
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsXXSmoothness,
+    #     smoothDir,
+    #     distribution,
+    #     "xx",
+    #     gridDict,
+    #     uniqueDict,
+    #     name=name,
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsYYSmoothness,
+    #     smoothDir,
+    #     distribution,
+    #     "yy",
+    #     gridDict,
+    #     uniqueDict,
+    #     name=name,
+    # )
 
     return allObsXXSmoothness, allObsYYSmoothness, allXXAvgSmooth, allYYAvgSmooth
 
@@ -962,188 +962,188 @@ def calPhaseSmoothness(
                 allObsKsTest.append(ksTest)
 
         # Plot for a single observation, the different smoothness for each interpolation
-        plotAllInterp(
-            ant, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
-        )
+        # plotAllInterp(
+        #     ant, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
+        # )
 
     # Save figure for all obsids XX
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXSmoothness,
-        smoothDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYSmoothness,
-        smoothDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXRMSE,
-        phaseStatsDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-        yAxis="RMSE",
-        name="_RMSE",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYRMSE,
-        phaseStatsDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-        yAxis="RMSE",
-        name="_RMSE",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXMAD,
-        phaseStatsDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-        yAxis="Mean absolute deivation",
-        name="_MAD",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYMAD,
-        phaseStatsDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-        yAxis="Mean absolute deivation",
-        name="_MAD",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXCubic,
-        phaseStatsDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-        yAxis="Cubic coefficient",
-        name="_cubic",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYCubic,
-        phaseStatsDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-        yAxis="Cubic coefficient",
-        name="_cubic",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsXXQuad,
-        phaseStatsDir,
-        distribution,
-        "xx",
-        gridDict,
-        uniqueDict,
-        yAxis="Quadratic coefficient",
-        name="_quad",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsYYQuad,
-        phaseStatsDir,
-        distribution,
-        "yy",
-        gridDict,
-        uniqueDict,
-        yAxis="Quadratic coefficient",
-        name="_quad",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsEuclid,
-        phaseStatsDir,
-        distribution,
-        "both",
-        gridDict,
-        uniqueDict,
-        yAxis="mean of euclid distance",
-        name="_euclid",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsEuclidSame,
-        phaseStatsDir,
-        distribution,
-        "both",
-        gridDict,
-        uniqueDict,
-        yAxis="mean of euclid distance",
-        name="_euclid_same",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsPval,
-        phaseStatsDir,
-        distribution,
-        "both",
-        gridDict,
-        uniqueDict,
-        yAxis="p-value",
-        name="_pval",
-    )
-
-    plotSmoothnessAllObs(
-        obsids,
-        ant,
-        allObsKsTest,
-        phaseStatsDir,
-        distribution,
-        "both",
-        gridDict,
-        uniqueDict,
-        yAxis="KS metric",
-        name="_kstest",
-    )
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsXXSmoothness,
+    #     smoothDir,
+    #     distribution,
+    #     "xx",
+    #     gridDict,
+    #     uniqueDict,
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsYYSmoothness,
+    #     smoothDir,
+    #     distribution,
+    #     "yy",
+    #     gridDict,
+    #     uniqueDict,
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsXXRMSE,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "xx",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="RMSE",
+    #     name="_RMSE",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsYYRMSE,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "yy",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="RMSE",
+    #     name="_RMSE",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsXXMAD,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "xx",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="Mean absolute deivation",
+    #     name="_MAD",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsYYMAD,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "yy",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="Mean absolute deivation",
+    #     name="_MAD",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsXXCubic,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "xx",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="Cubic coefficient",
+    #     name="_cubic",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsYYCubic,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "yy",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="Cubic coefficient",
+    #     name="_cubic",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsXXQuad,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "xx",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="Quadratic coefficient",
+    #     name="_quad",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsYYQuad,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "yy",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="Quadratic coefficient",
+    #     name="_quad",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsEuclid,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "both",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="mean of euclid distance",
+    #     name="_euclid",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsEuclidSame,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "both",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="mean of euclid distance",
+    #     name="_euclid_same",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsPval,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "both",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="p-value",
+    #     name="_pval",
+    # )
+    #
+    # plotSmoothnessAllObs(
+    #     obsids,
+    #     ant,
+    #     allObsKsTest,
+    #     phaseStatsDir,
+    #     distribution,
+    #     "both",
+    #     gridDict,
+    #     uniqueDict,
+    #     yAxis="KS metric",
+    #     name="_kstest",
+    # )
 
     return (
         allObsXXRMSE,
