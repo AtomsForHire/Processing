@@ -379,7 +379,7 @@ def main():
             debugObsList,
             debugAntList,
             norm,
-            useWindow=True,
+            useWindow=False,
         )
     )
 
@@ -400,6 +400,7 @@ def main():
 
     print("CORRELATION")
     print("XX RMSE VS XX SMOOTH")
+    print(len(xxPhaseRMSE), len(xxGainSmoothness))
     correlation.crossCorrAcrossAnt(
         xxGainSmoothness,
         xxPhaseRMSE,
