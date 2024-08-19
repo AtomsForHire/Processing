@@ -1,6 +1,7 @@
 import json
 import math
 
+import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 from mwa_qa import cal_metrics, read_calfits
@@ -311,13 +312,13 @@ def plotDebug(mean, old, yreal, yimag, y, yf, obs, ant):
         # smooth = np.average(abs(yf[1 : int(3072 / 2)]) / abs(yf[0]))
         fig, axs = plt.subplots(2, 2)
         axs[0, 0].plot(old.real, "r.", alpha=0.5, markersize=1, label="old")
-        axs[0, 0].plot(mean.real, linewidth=0.5, label="mean")
+        axs[0, 0].plot(mean.real, "b.", alpha=0.5, markersize=1, label="mean")
         axs[0, 0].plot(yreal, linewidth=0.5, label="interp")
         axs[0, 0].set_title(obs + " amps solutions real antenna " + str(ant))
         axs[0, 0].legend()
 
-        axs[0, 1].plot(old.imag, "r.", alpha=0.5, markersize=0.75, label="old")
-        axs[0, 1].plot(mean.imag, linewidth=0.5, label="mean")
+        axs[0, 1].plot(old.imag, "r.", alpha=0.5, markersize=1, label="old")
+        axs[0, 1].plot(mean.imag, "b.", alpha=0.5, markersize=1, label="mean")
         axs[0, 1].plot(yimag, linewidth=0.5, label="interp")
         axs[0, 1].set_title(obs + " amps solutions imag")
 
@@ -355,7 +356,6 @@ def movePhases(phases):
         modified phases
     """
 
-    # BUG: NEED TO DEAL WITH FLAGGED FREQUENCY CHANNELS
     prevAngle = phases[0]
     for i in range(1, len(phases)):
         currAngle = phases[i]
@@ -390,6 +390,8 @@ def phaseFit(x, y, interp_type, obs, ant, norm, debug, debugTargetObs, debugTarg
 
     """
 
+    # "Real" data
+
     y = interpChoices(x, y, interp_type)
     # Do linear fit stats
     # NOTE: For some absolutely non-sensical reason numpy has a domain
@@ -397,6 +399,8 @@ def phaseFit(x, y, interp_type, obs, ant, norm, debug, debugTargetObs, debugTarg
     # x-values, but window has default value of [-1, 1]. This means
     # the fitting is done in the correct domain, but outputting the
     # coefs are in the window-domain. SO fucking stupid.
+
+    # "Predicted" data
     linearFit = Polynomial.fit(
         x, y, deg=1, domain=[x.min(), x.max()], window=[x.min(), x.max()]
     )
@@ -556,6 +560,13 @@ def getKsTest(xx, yy):
     return (result[0], result[1])
 
 
+def saveNormalised(xxNormalised, yyNormalised, obsids):
+    with h5py.File("median_normalised.h5", "w") as f:
+        f.create_dataset("xx_median_normalised", data=xxNormalised)
+        f.create_dataset("yy_median_normalised", data=yyNormalised)
+        f.create_dataset("obsids", data=obsids)
+
+
 def calAmpSmoothness(
     obsids,
     solDir,
@@ -583,8 +594,8 @@ def calAmpSmoothness(
         Dictionary where keys are obs ids and values are their grid number
     - uniqueDict: `dictionary`
         Dictionary of unique grid numbers and how often they occur
-    - normalise: `bool`
-        True or False, enable or disable normalisation
+    - normalise: `string`
+        "mean" or "median", decides which to use for normalisation
 
     Returns
     -------
@@ -597,33 +608,70 @@ def calAmpSmoothness(
     xxAllCalPerObsList = []
     yyAllCalPerObsList = []
 
-    xxMeanSolutionPerObs = []
-    yyMeanSolutionPerObs = []
-    nFreqPerObs = []
-    # Have to extract all the gain arrays first, so we can normalise by the average
-    for i in range(0, len(obsids)):
-        obs = obsids[i]
-        filename = solDir + "/" + obs + "_solutions.fits"
+    if normalise == "mean":
+        xxMeanOrMedianSolutionPerObs = []
+        yyMeanOrMedianSolutionPerObs = []
+        nFreqPerObs = []
+        # Have to extract all the gain arrays first, so we can normalise by the average
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            filename = solDir + "/" + obs + "_solutions.fits"
 
-        # These are a list of the calibration solutions for each antenna
-        xxObsCals = []
-        yyObsCals = []
-        # do NOT normalise
-        cal = read_calfits.CalFits(filename, norm=False)
-        nFreqPerObs.append(cal.Nchan)
-        for j in range(0, len(cal.gain_array[0, :, 0, 0])):
-            xxObsCals.append(cal.gain_array[0, j, :, 0].copy())
-            yyObsCals.append(cal.gain_array[0, j, :, 1].copy())
+            # These are a list of the calibration solutions for each antenna
+            xxObsCals = []
+            yyObsCals = []
+            # do NOT normalise
+            cal = read_calfits.CalFits(filename, norm=False)
+            nFreqPerObs.append(cal.Nchan)
+            for j in range(0, len(cal.gain_array[0, :, 0, 0])):
+                xxObsCals.append(cal.gain_array[0, j, :, 0].copy())
+                yyObsCals.append(cal.gain_array[0, j, :, 1].copy())
 
-        xxMeanSolutionPerObs.append(np.nansum(xxObsCals, 0) / len(xxObsCals))
-        yyMeanSolutionPerObs.append(np.nansum(yyObsCals, 0) / len(yyObsCals))
-        xxAllCalPerObsList.append(xxObsCals)
-        yyAllCalPerObsList.append(yyObsCals)
+            xxMeanOrMedianSolutionPerObs.append(
+                np.nansum(xxObsCals, 0) / len(xxObsCals)
+            )
+            yyMeanOrMedianSolutionPerObs.append(
+                np.nansum(yyObsCals, 0) / len(yyObsCals)
+            )
+            xxAllCalPerObsList.append(xxObsCals)
+            yyAllCalPerObsList.append(yyObsCals)
 
-    ######
+        ###########################################################################
+    elif normalise == "median":
+        # Normalise by median
+        xxMeanOrMedianSolutionPerObs = []
+        yyMeanOrMedianSolutionPerObs = []
+        nFreqPerObs = []
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            filename = solDir + "/" + obs + "_solutions.fits"
+
+            # These are a list of the calibration solutions for each antenna
+            xxObsCals = []
+            yyObsCals = []
+            cal = read_calfits.CalFits(filename, norm=False)
+            nFreqPerObs.append(cal.Nchan)
+
+            for j in range(0, len(cal.gain_array[0, :, 0, 0])):
+                xxObsCals.append(cal.gain_array[0, j, :, 0].copy())
+                yyObsCals.append(cal.gain_array[0, j, :, 1].copy())
+
+            xxMeanOrMedianSolutionPerObs.append(np.nanmedian(xxObsCals, axis=0))
+            yyMeanOrMedianSolutionPerObs.append(np.nanmedian(yyObsCals, axis=0))
+            xxAllCalPerObsList.append(xxObsCals)
+            yyAllCalPerObsList.append(yyObsCals)
+        # saveNormalised(
+        #     np.array(xxAllCalPerObsList),
+        #     np.array(yyAllCalPerObsList),
+        #     np.array(obsids, dtype="S"),
+        # )
+
+    ###########################################################################
 
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
+    allObsXXNormalised = list()
+    allObsYYNormalised = list()
     allXXAvgSmooth = list()
     allYYAvgSmooth = list()
     for i in tqdm(range(0, len(obsids))):
@@ -641,24 +689,49 @@ def calAmpSmoothness(
 
         xxSmoothness = list()
         yySmoothness = list()
+        obsXXNormalised = []
+        obsYYNormalised = []
 
         # Loop over antennas
         for j in range(0, len(xxAllCalPerObsList[i])):
             # Extract amplitudes for XX pol
-            # xxOld = cal.gain_array[0, j, :, 0].copy()
-            # xxReal = cal.gain_array[0, j, :, 0].real.copy() * window
-            # xxImag = cal.gain_array[0, j, :, 0].imag.copy() * window
             xxOld = xxAllCalPerObsList[i][j].copy()
+            # print(xxOld[2291:2293].real)
+            # print(xxMedianSolutionPerObs[i][2291:2293].real)
+            # print(window[2291:2293])
             xxReal = (
                 xxAllCalPerObsList[i][j].real.copy()
-                / xxMeanSolutionPerObs[i].real
+                / xxMeanOrMedianSolutionPerObs[i].real
                 * window
             )
+            # print(xxReal[2291:2293])
             xxImag = (
                 xxAllCalPerObsList[i][j].imag.copy()
-                / xxMeanSolutionPerObs[i].imag
+                / xxMeanOrMedianSolutionPerObs[i].imag
                 * window
             )
+
+            xxNormalised = xxReal + 1j * xxImag
+            obsXXNormalised.append(xxNormalised)
+
+            # Samething for YY pol
+            # yyOld = cal.gain_array[0, j, :, 3].copy()
+            # yyReal = cal.gain_array[0, j, :, 3].real * window
+            # yyImag = cal.gain_array[0, j, :, 3].imag * window
+            yyOld = yyAllCalPerObsList[i][j].copy()
+            yyReal = (
+                yyAllCalPerObsList[i][j].real.copy()
+                / yyMeanOrMedianSolutionPerObs[i].real
+                * window
+            )
+            yyImag = (
+                yyAllCalPerObsList[i][j].imag.copy()
+                / yyMeanOrMedianSolutionPerObs[i].imag
+                * window
+            )
+
+            yyNormalised = yyReal + 1j * yyImag
+            obsYYNormalised.append(yyNormalised)
 
             # Skip flagged antennas
             if (
@@ -671,7 +744,7 @@ def calAmpSmoothness(
                 continue
 
             smooth = calcSmooth(
-                xxMeanSolutionPerObs[i],
+                xxMeanOrMedianSolutionPerObs[i],
                 x,
                 xxOld,
                 xxReal,
@@ -687,23 +760,8 @@ def calAmpSmoothness(
 
             xxSmoothness.append(smooth)
 
-            # Samething for YY pol
-            # yyOld = cal.gain_array[0, j, :, 3].copy()
-            # yyReal = cal.gain_array[0, j, :, 3].real * window
-            # yyImag = cal.gain_array[0, j, :, 3].imag * window
-            yyOld = yyAllCalPerObsList[i][j].copy()
-            yyReal = (
-                yyAllCalPerObsList[i][j].real.copy()
-                / yyMeanSolutionPerObs[i].real
-                * window
-            )
-            yyImag = (
-                yyAllCalPerObsList[i][j].imag.copy()
-                / yyMeanSolutionPerObs[i].imag
-                * window
-            )
             smooth1 = calcSmooth(
-                yyMeanSolutionPerObs[i],
+                yyMeanOrMedianSolutionPerObs[i],
                 x,
                 yyOld,
                 yyReal,
@@ -718,10 +776,18 @@ def calAmpSmoothness(
             )
             yySmoothness.append(smooth1)
 
+        allObsXXNormalised.append(obsXXNormalised)
+        allObsYYNormalised.append(obsYYNormalised)
         allObsXXSmoothness.append(xxSmoothness)
         allObsYYSmoothness.append(yySmoothness)
         allXXAvgSmooth.append(np.nanmean(xxSmoothness))
         allYYAvgSmooth.append(np.nanmean(yySmoothness))
+
+    saveNormalised(
+        np.array(allObsXXNormalised),
+        np.array(allObsYYNormalised),
+        np.array(obsids, dtype="S"),
+    )
 
     return allObsXXSmoothness, allObsYYSmoothness, allXXAvgSmooth, allYYAvgSmooth
 
@@ -754,8 +820,8 @@ def calPhaseSmoothness(
         Dictionary where keys are obs ids and values are their grid number
     - uniqueDict: `dictionary`
         Dictionary of unique grid numbers and how often they occur
-    - normalise: `bool`
-        True or False, enable or disable normalisation
+    - normalise: `string`
+        "mean" or "median", decides which to use for normalisation
 
     Returns
     -------
@@ -768,28 +834,58 @@ def calPhaseSmoothness(
     xxAllPhasePerObsList = []
     yyAllPhasePerObsList = []
 
-    xxMeanSolutionPerObs = []
-    yyMeanSolutionPerObs = []
-    nFreqPerObs = []
-    # Have to extract all the gain arrays first, so we can normalise by the average
-    for i in range(0, len(obsids)):
-        obs = obsids[i]
-        filename = solDir + "/" + obs + "_solutions.fits"
+    if normalise == "mean":
+        xxMeanOrMedianSolutionPerObs = []
+        yyMeanOrMedianSolutionPerObs = []
+        nFreqPerObs = []
+        # Have to extract all the gain arrays first, so we can normalise by the average
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            filename = solDir + "/" + obs + "_solutions.fits"
 
-        # These are a list of the calibration solutions for each antenna
-        xxObsPhase = []
-        yyObsPhase = []
-        # do NOT normalise
-        cal = read_calfits.CalFits(filename, norm=False)
-        nFreqPerObs.append(cal.Nchan)
-        for j in range(0, len(cal.gain_array[0, :, 0, 0])):
-            xxObsPhase.append(cal.phases[0, j, :, 0])
-            yyObsPhase.append(cal.phases[0, j, :, 1])
+            # These are a list of the calibration solutions for each antenna
+            xxObsCals = []
+            yyObsCals = []
+            # do NOT normalise
+            cal = read_calfits.CalFits(filename, norm=False)
+            nFreqPerObs.append(cal.Nchan)
+            for j in range(0, len(cal.phases[0, :, 0, 0])):
+                xxObsCals.append(cal.phases[0, j, :, 0].copy())
+                yyObsCals.append(cal.phases[0, j, :, 1].copy())
 
-        xxMeanSolutionPerObs.append(np.nansum(xxObsPhase, 0) / len(xxObsPhase))
-        yyMeanSolutionPerObs.append(np.nansum(yyObsPhase, 0) / len(yyObsPhase))
-        xxAllPhasePerObsList.append(xxObsPhase)
-        yyAllPhasePerObsList.append(yyObsPhase)
+            xxMeanOrMedianSolutionPerObs.append(
+                np.nansum(xxObsCals, 0) / len(xxObsCals)
+            )
+            yyMeanOrMedianSolutionPerObs.append(
+                np.nansum(yyObsCals, 0) / len(yyObsCals)
+            )
+            xxAllPhasePerObsList.append(xxObsCals)
+            yyAllPhasePerObsList.append(yyObsCals)
+
+    ###########################################################################
+    elif normalise == "median":
+        # Normalise by median
+        xxMeanOrMedianSolutionPerObs = []
+        yyMeanOrMedianSolutionPerObs = []
+        nFreqPerObs = []
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            filename = solDir + "/" + obs + "_solutions.fits"
+
+            # These are a list of the calibration solutions for each antenna
+            xxObsCals = []
+            yyObsCals = []
+            cal = read_calfits.CalFits(filename, norm=False)
+            nFreqPerObs.append(cal.Nchan)
+
+            for j in range(0, len(cal.phases[0, :, 0, 0])):
+                xxObsCals.append(cal.phases[0, j, :, 0].copy())
+                yyObsCals.append(cal.phases[0, j, :, 1].copy())
+
+            xxMeanOrMedianSolutionPerObs.append(np.nanmedian(xxObsCals, axis=0))
+            yyMeanOrMedianSolutionPerObs.append(np.nanmedian(yyObsCals, axis=0))
+            xxAllPhasePerObsList.append(xxObsCals)
+            yyAllPhasePerObsList.append(yyObsCals)
 
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
@@ -842,7 +938,7 @@ def calPhaseSmoothness(
             # Normalise all angles to sit between [0, 360]
 
             xxOld = xxAllPhasePerObsList[i][j].copy()
-            xx = xxAllPhasePerObsList[i][j].copy()
+            xx = xxAllPhasePerObsList[i][j].copy() / xxMeanOrMedianSolutionPerObs[i]
             xx = movePhases(xx)
             xx *= window
 
@@ -865,7 +961,7 @@ def calPhaseSmoothness(
                 continue
 
             smooth = calcSmooth(
-                xxMeanSolutionPerObs[i],
+                xxMeanOrMedianSolutionPerObs[i],
                 x,
                 xxOld,
                 xx,
@@ -901,12 +997,12 @@ def calPhaseSmoothness(
             # yyOld = cal.phases[0, j, :, 3].copy()
             # yy = cal.phases[0, j, :, 3]
             yyOld = yyAllPhasePerObsList[i][j].copy()
-            yy = yyAllPhasePerObsList[i][j].copy()
+            yy = yyAllPhasePerObsList[i][j].copy() / yyMeanOrMedianSolutionPerObs[i]
             yy = movePhases(yy)
             yy *= window
 
             smooth1 = calcSmooth(
-                yyMeanSolutionPerObs,
+                yyMeanOrMedianSolutionPerObs,
                 x,
                 yyOld,
                 yy,
