@@ -560,11 +560,17 @@ def getKsTest(xx, yy):
     return (result[0], result[1])
 
 
-def saveNormalised(xxNormalised, yyNormalised, obsids):
-    with h5py.File("median_normalised.h5", "w") as f:
-        f.create_dataset("xx_median_normalised", data=xxNormalised)
-        f.create_dataset("yy_median_normalised", data=yyNormalised)
-        f.create_dataset("obsids", data=obsids)
+def saveNormalised(xxNormalised, yyNormalised, obsids, name):
+    if name == "amplitude":
+        with h5py.File("amp_median_normalised.h5", "w") as f:
+            f.create_dataset("xx_median_normalised", data=xxNormalised)
+            f.create_dataset("yy_median_normalised", data=yyNormalised)
+            f.create_dataset("obsids", data=obsids)
+    elif name == "phase":
+        with h5py.File("phase_median_normalised.h5", "w") as f:
+            f.create_dataset("xx_median_normalised", data=xxNormalised)
+            f.create_dataset("yy_median_normalised", data=yyNormalised)
+            f.create_dataset("obsids", data=obsids)
 
 
 def calAmpSmoothness(
@@ -638,7 +644,8 @@ def calAmpSmoothness(
 
         ###########################################################################
     elif normalise == "median":
-        # Normalise by median
+        # The "median" solutions of these complex numbers require the median of the
+        # re and imag parts separately.
         xxMeanOrMedianSolutionPerObs = []
         yyMeanOrMedianSolutionPerObs = []
         nFreqPerObs = []
@@ -649,21 +656,35 @@ def calAmpSmoothness(
             # These are a list of the calibration solutions for each antenna
             xxObsCals = []
             yyObsCals = []
+            xxObsCalsReal = []
+            yyObsCalsReal = []
+            xxObsCalsImag = []
+            yyObsCalsImag = []
             cal = read_calfits.CalFits(filename, norm=False)
             nFreqPerObs.append(cal.Nchan)
 
             for j in range(0, len(cal.gain_array[0, :, 0, 0])):
                 xxObsCals.append(cal.gain_array[0, j, :, 0].copy())
-                yyObsCals.append(cal.gain_array[0, j, :, 1].copy())
+                yyObsCals.append(cal.gain_array[0, j, :, 3].copy())
+                xxObsCalsReal.append(cal.gain_array[0, j, :, 0].real.copy())
+                yyObsCalsReal.append(cal.gain_array[0, j, :, 3].real.copy())
+                xxObsCalsImag.append(cal.gain_array[0, j, :, 0].imag.copy())
+                yyObsCalsImag.append(cal.gain_array[0, j, :, 3].imag.copy())
 
-            xxMeanOrMedianSolutionPerObs.append(np.nanmedian(xxObsCals, axis=0))
-            yyMeanOrMedianSolutionPerObs.append(np.nanmedian(yyObsCals, axis=0))
+            xxRealMedian = np.nanmedian(xxObsCalsReal, axis=0)
+            xxImagMedian = np.nanmedian(xxObsCalsImag, axis=0)
+            yyRealMedian = np.nanmedian(yyObsCalsReal, axis=0)
+            yyImagMedian = np.nanmedian(yyObsCalsImag, axis=0)
+
+            xxMeanOrMedianSolutionPerObs.append(xxRealMedian + 1j * xxImagMedian)
+            yyMeanOrMedianSolutionPerObs.append(yyRealMedian + 1j * yyImagMedian)
             xxAllCalPerObsList.append(xxObsCals)
             yyAllCalPerObsList.append(yyObsCals)
         # saveNormalised(
         #     np.array(xxAllCalPerObsList),
         #     np.array(yyAllCalPerObsList),
         #     np.array(obsids, dtype="S"),
+        #     "amplitude",
         # )
 
     ###########################################################################
@@ -787,9 +808,19 @@ def calAmpSmoothness(
         np.array(allObsXXNormalised),
         np.array(allObsYYNormalised),
         np.array(obsids, dtype="S"),
+        "amplitude",
     )
+    print(len(allObsXXNormalised))
+    print(len(allObsYYNormalised))
 
-    return allObsXXSmoothness, allObsYYSmoothness, allXXAvgSmooth, allYYAvgSmooth
+    return (
+        allObsXXSmoothness,
+        allObsYYSmoothness,
+        allXXAvgSmooth,
+        allYYAvgSmooth,
+        allObsXXNormalised,
+        allObsYYNormalised,
+    )
 
 
 def calPhaseSmoothness(
@@ -851,7 +882,7 @@ def calPhaseSmoothness(
             nFreqPerObs.append(cal.Nchan)
             for j in range(0, len(cal.phases[0, :, 0, 0])):
                 xxObsCals.append(cal.phases[0, j, :, 0].copy())
-                yyObsCals.append(cal.phases[0, j, :, 1].copy())
+                yyObsCals.append(cal.phases[0, j, :, 3].copy())
 
             xxMeanOrMedianSolutionPerObs.append(
                 np.nansum(xxObsCals, 0) / len(xxObsCals)
@@ -878,12 +909,18 @@ def calPhaseSmoothness(
             cal = read_calfits.CalFits(filename, norm=False)
             nFreqPerObs.append(cal.Nchan)
 
-            for j in range(0, len(cal.phases[0, :, 0, 0])):
+            for j in range(0, len(cal.gain_array[0, :, 0, 0])):
+                # xxObsCals.append(np.angle(cal.gain_array[0, j, :, 0].copy()))
+                # yyObsCals.append(np.angle(cal.gain_array[0, j, :, 1].copy()))
                 xxObsCals.append(cal.phases[0, j, :, 0].copy())
-                yyObsCals.append(cal.phases[0, j, :, 1].copy())
+                yyObsCals.append(cal.phases[0, j, :, 3].copy())
 
-            xxMeanOrMedianSolutionPerObs.append(np.nanmedian(xxObsCals, axis=0))
-            yyMeanOrMedianSolutionPerObs.append(np.nanmedian(yyObsCals, axis=0))
+            xxRealMedian = np.nanmedian(xxObsCals, axis=0)
+            yyRealMedian = np.nanmedian(yyObsCals, axis=0)
+
+            xxMeanOrMedianSolutionPerObs.append(xxRealMedian)
+            yyMeanOrMedianSolutionPerObs.append(yyRealMedian)
+
             xxAllPhasePerObsList.append(xxObsCals)
             yyAllPhasePerObsList.append(yyObsCals)
 
@@ -901,17 +938,14 @@ def calPhaseSmoothness(
     allObsEuclidSame = list()
     allObsPval = list()
     allObsKsTest = list()
+    allObsXXNormalised = list()
+    allObsYYNormalised = list()
 
     # Loop through observations
     for i in tqdm(range(0, len(obsids))):
 
         nFreq = nFreqPerObs[i]
         x = np.linspace(0, nFreq - 1, nFreq)
-
-        if useWindow is True:
-            window = signal.windows.blackmanharris(nFreq)
-        else:
-            window = np.ones(nFreq)
 
         xxSmoothness = list()
         yySmoothness = list()
@@ -928,6 +962,8 @@ def calPhaseSmoothness(
         euclidSame = list()
         pVal = list()
         ksTest = list()
+        obsXXNormalised = []
+        obsYYNormalised = []
 
         # Loop over antennas (Except the last one which is the reference antenna)
         for j in range(0, len(cal.phases[0, :, 0, 0])):
@@ -938,9 +974,14 @@ def calPhaseSmoothness(
             # Normalise all angles to sit between [0, 360]
 
             xxOld = xxAllPhasePerObsList[i][j].copy()
-            xx = xxAllPhasePerObsList[i][j].copy() / xxMeanOrMedianSolutionPerObs[i]
+            xx = xxAllPhasePerObsList[i][j].copy()  # / xxMeanOrMedianSolutionPerObs[i]
             xx = movePhases(xx)
-            xx *= window
+            obsXXNormalised.append(xx)
+
+            yyOld = yyAllPhasePerObsList[i][j].copy()
+            yy = yyAllPhasePerObsList[i][j].copy()  # / yyMeanOrMedianSolutionPerObs[i]
+            yy = movePhases(yy)
+            obsYYNormalised.append(yy)
 
             # Skip flagged antennas
             if np.nansum(xx) == 0.0:
@@ -992,14 +1033,6 @@ def calPhaseSmoothness(
             xxQuad.append(coeffs[1])
 
             xxSmoothness.append(smooth)
-
-            # Samething for YY pol
-            # yyOld = cal.phases[0, j, :, 3].copy()
-            # yy = cal.phases[0, j, :, 3]
-            yyOld = yyAllPhasePerObsList[i][j].copy()
-            yy = yyAllPhasePerObsList[i][j].copy() / yyMeanOrMedianSolutionPerObs[i]
-            yy = movePhases(yy)
-            yy *= window
 
             smooth1 = calcSmooth(
                 yyMeanOrMedianSolutionPerObs,
@@ -1054,185 +1087,21 @@ def calPhaseSmoothness(
         allObsEuclidSame.append(euclidSame)
         allObsPval.append(pVal)
         allObsKsTest.append(ksTest)
+        allObsXXNormalised.append(obsXXNormalised)
+        allObsYYNormalised.append(obsYYNormalised)
 
-    # Save figure for all obsids XX
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsXXSmoothness,
-    #     smoothDir,
-    #     distribution,
-    #     "xx",
-    #     gridDict,
-    #     uniqueDict,
+    # saveNormalised(
+    #     np.array(xxAllPhasePerObsList),
+    #     np.array(yyAllPhasePerObsList),
+    #     np.array(obsids, dtype="S"),
+    #     "phase",
     # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsYYSmoothness,
-    #     smoothDir,
-    #     distribution,
-    #     "yy",
-    #     gridDict,
-    #     uniqueDict,
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsXXRMSE,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "xx",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="RMSE",
-    #     name="_RMSE",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsYYRMSE,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "yy",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="RMSE",
-    #     name="_RMSE",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsXXMAD,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "xx",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="Mean absolute deivation",
-    #     name="_MAD",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsYYMAD,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "yy",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="Mean absolute deivation",
-    #     name="_MAD",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsXXCubic,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "xx",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="Cubic coefficient",
-    #     name="_cubic",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsYYCubic,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "yy",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="Cubic coefficient",
-    #     name="_cubic",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsXXQuad,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "xx",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="Quadratic coefficient",
-    #     name="_quad",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsYYQuad,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "yy",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="Quadratic coefficient",
-    #     name="_quad",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsEuclid,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "both",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="mean of euclid distance",
-    #     name="_euclid",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsEuclidSame,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "both",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="mean of euclid distance",
-    #     name="_euclid_same",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsPval,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "both",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="p-value",
-    #     name="_pval",
-    # )
-    #
-    # plotSmoothnessAllObs(
-    #     obsids,
-    #     ant,
-    #     allObsKsTest,
-    #     phaseStatsDir,
-    #     distribution,
-    #     "both",
-    #     gridDict,
-    #     uniqueDict,
-    #     yAxis="KS metric",
-    #     name="_kstest",
-    # )
+    saveNormalised(
+        np.array(allObsXXNormalised),
+        np.array(allObsYYNormalised),
+        np.array(obsids, dtype="S"),
+        "phase",
+    )
 
     return (
         allObsXXRMSE,

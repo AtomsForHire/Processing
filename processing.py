@@ -322,7 +322,9 @@ def main():
         f"{bcolors.OKBLUE}TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED{bcolors.ENDC}: ",
         len(obsids),
     )
+
     print(f"{bcolors.OKBLUE}OBSERVATIONS AND THEIR GRIDNUM{bcolors.ENDC}: {gridDict}")
+
     print(
         f"{bcolors.OKBLUE}UNIQUE GRIDNUMS AND FREQUENCY {bcolors.ENDC}: {len(uniqueDict)} {uniqueDict}"
     )
@@ -349,20 +351,25 @@ def main():
     # calibration.calRMS(obsids, rmsDir, solDir)
 
     print("AMP SMOOTHNESS")
-    xxGainSmoothness, yyGainSmoothness, xxAvgSmoothness, yyAvgSmoothness = (
-        calibration.calAmpSmoothness(
-            obsids,
-            solDir,
-            smoothDirAmps,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
-            window,
-        )
+    (
+        xxGainSmoothness,
+        yyGainSmoothness,
+        xxAvgSmoothness,
+        yyAvgSmoothness,
+        allObsXXNormalised,
+        allObsYYNormalised,
+    ) = calibration.calAmpSmoothness(
+        obsids,
+        solDir,
+        smoothDirAmps,
+        distribution,
+        gridDict,
+        uniqueDict,
+        debug,
+        debugObsList,
+        debugAntList,
+        norm,
+        window,
     )
 
     print("PHASE SMOOTHNESS")
@@ -397,6 +404,7 @@ def main():
         phaseEuclidSame,
         phaseKs,
     )
+    exit()
 
     print("CORRELATION")
     print("XX RMSE VS XX SMOOTH")
