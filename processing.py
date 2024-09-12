@@ -221,7 +221,6 @@ def getGridNum(obsids, solDir):
 
 
 def saveText(gridDict, stats, obsids, name):
-
     with open("text/" + name + ".txt", "w") as f:
         for i in range(0, len(obsids)):
             obs = obsids[i]
@@ -243,6 +242,7 @@ def saveHDF5(
     yyPhaseMAD,
     phaseEuclidSame,
     phaseKs,
+    phaseAnderson,
 ):
     with h5py.File("output.hdf5", "w") as f:
         # save obsids
@@ -268,6 +268,7 @@ def saveHDF5(
         phase.create_dataset("yyPhaseMAD", data=yyPhaseMAD)
         phase.create_dataset("phaseEuclidSame", data=phaseEuclidSame)
         phase.create_dataset("phaseKs", data=phaseKs)
+        phase.create_dataset("phaseAnderson", data=phaseAnderson)
 
 
 def main():
@@ -373,21 +374,27 @@ def main():
     )
 
     print("PHASE SMOOTHNESS")
-    xxPhaseRMSE, yyPhaseRMSE, xxPhaseMAD, yyPhaseMAD, phaseEuclidSame, phaseKs = (
-        calibration.calPhaseSmoothness(
-            obsids,
-            solDir,
-            smoothDirPhase,
-            phaseStatsDir,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
-            useWindow=False,
-        )
+    (
+        xxPhaseRMSE,
+        yyPhaseRMSE,
+        xxPhaseMAD,
+        yyPhaseMAD,
+        phaseEuclidSame,
+        phaseKs,
+        phaseAnderson,
+    ) = calibration.calPhaseSmoothness(
+        obsids,
+        solDir,
+        smoothDirPhase,
+        phaseStatsDir,
+        distribution,
+        gridDict,
+        uniqueDict,
+        debug,
+        debugObsList,
+        debugAntList,
+        norm,
+        useWindow=False,
     )
 
     saveHDF5(
@@ -403,7 +410,9 @@ def main():
         yyPhaseMAD,
         phaseEuclidSame,
         phaseKs,
+        phaseAnderson,
     )
+
     exit()
 
     print("CORRELATION")
