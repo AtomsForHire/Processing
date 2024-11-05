@@ -3,15 +3,14 @@ import os
 import sys
 from pathlib import Path
 
+import calibration
+import correlation
 import h5py
+import image
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from astropy.io import fits
-
-import calibration
-import correlation
-import image
 
 
 class bcolors:
@@ -244,7 +243,7 @@ def saveHDF5(
     phaseKs,
     phaseAnderson,
 ):
-    with h5py.File("output.hdf5", "w") as f:
+    with h5py.File("output.h5", "w") as f:
         # save obsids
         f.create_dataset("obsids", data=obsids)
 
@@ -344,7 +343,7 @@ def main():
     for i in range(0, len(obsids)):
         gridNums.append(gridDict[obsids[i]])
 
-    # Attemp Ridhima's QA pipeline
+    # Ridhima's QA pipeline
     # print("Calibration variance")
     # calibration.calVar(obsids, varDir, solDir)
     #

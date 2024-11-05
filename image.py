@@ -1,6 +1,4 @@
-import os
 import re
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,6 +21,7 @@ def calcRMS(filename):
     hdu = fits.open(filename)
     data = np.squeeze(hdu[0].data)
 
+    # print(filename, np.sum(data**2))
     return np.sqrt(np.mean(data**2))
 
 
@@ -209,19 +208,6 @@ def getRMSVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     """
     rmsVec = np.zeros(len(obsids))
 
-    # for file in os.listdir(directory):
-    #     if os.path.isfile(file) and file.endswith(".tsv"):
-    #         obsid = file.split("_")[0]
-    #
-    #         if obsid not in obsids:
-    #             continue
-    #
-    #         rms = getRMS(file)
-    #         rms2 = calcRMS(imgDir + "/" + obsid + "_image_n=10000.fits")
-    #         print(rms, rms2)
-    #
-    #         rmsVec[obsids.index(obsid)] = rms
-
     for obs in obsids:
         rms = calcRMS(imgDir + "/" + obs + "_image_n=10000.fits")
         rmsVec[obsids.index(obs)] = rms
@@ -270,17 +256,6 @@ def getMaxVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     """
     maxVec = np.zeros(len(obsids))
 
-    # for file in os.listdir(directory):
-    #     if os.path.isfile(file) and file.endswith(".tsv"):
-    #         obsid = file.split("_")[0]
-    #         if obsid not in obsids:
-    #             continue
-    #         max = getMax(file)
-    #         max2 = calcMax(imgDir + obsid + "_image_n=10000.fits")
-    #
-    #         print(max, max2)
-    #
-    #         maxVec[obsids.index(obsid)] = max
     for obs in obsids:
         max = calcMax(imgDir + "/" + obs + "_image_n=10000.fits")
         maxVec[obsids.index(obs)] = max
@@ -321,17 +296,6 @@ def getDRVec(directory, obsids, distribution, gridDict, uniqueDict, imgDir):
     -------
     """
     drVec = np.zeros(len(obsids))
-
-    # for file in os.listdir(directory):
-    #     if os.path.isfile(file) and file.endswith(".tsv"):
-    #         obsid = file.split("_")[0]
-    #         if obsid not in obsids:
-    #             continue
-    #         max = getMax(file)
-    #         rms = getRMS(file)
-    #         dr = max / rms
-    #
-    #         drVec[obsids.index(obsid)] = dr
 
     for obs in obsids:
         rms = calcRMS(imgDir + "/" + obs + "_image_n=10000.fits")
