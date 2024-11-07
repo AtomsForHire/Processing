@@ -485,8 +485,6 @@ def calAmpSmoothness(
     yyAllCalPerObsList = []
 
     ###########################################################################
-    # The "median" solutions of these complex numbers require the median of the
-    # re and imag parts separately.
     xxMeanOrMedianSolutionPerObs = []
     yyMeanOrMedianSolutionPerObs = []
     nFreqPerObs = []
@@ -659,11 +657,12 @@ def calPhaseSmoothness(
     yyAllPhasePerObsList = []
 
     nFreqPerObs = []
+    # Loop obsid and read in fits file
     for i in range(0, len(obsids)):
         obs = obsids[i]
         filename = solDir + "/" + obs + "_solutions.fits"
 
-        # These are a list of the calibration solutions for each antenna
+        # These are a list of the calibration solutions for each antenna in one obs
         xxObsCals = []
         yyObsCals = []
         cal = read_calfits.CalFits(filename, norm=False)
@@ -712,6 +711,7 @@ def calPhaseSmoothness(
         obsXXNormalised = []
         obsYYNormalised = []
 
+        # Loop through antennas
         for j in range(0, len(cal.phases[0, :, 0, 0])):
             # 'old' for debugging purposes
 
