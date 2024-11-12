@@ -194,7 +194,7 @@ def plotDebug(median, old, yreal, y, yf, obs, ant, pol):
 
 
 @njit(cache=True)
-def movePhases(phases):
+def movePhases(phases, threshold=180.0, window_size=5):
     """Function to make phases not wrap
 
     Parameters
@@ -208,15 +208,37 @@ def movePhases(phases):
         modified phases
     """
 
-    prevAngle = phases[0]
+    phases = phases.copy()  # Work on a copy to preserve original
+
+    # Find first valid point to start from
+    valid_mask = ~np.isnan(phases)
+    if not np.any(valid_mask):
+        return phases  # All NaN case
+
+    # First pass: identify and handle outliers
+    for i in range(window_size, len(phases)):
+        if np.isnan(phases[i]):
+            continue
+
+        # Get median of previous valid points within window
+        prev_window = phases[max(0, i - window_size) : i]
+        prev_median = np.nanmedian(prev_window)
+
+        # Check if current point is an outlier
+        diff = phases[i] - prev_median
+        if abs(diff) > threshold:
+            # Mark outlier with NaN so it doesn't affect subsequent unwrapping
+            phases[i] = np.nan
+
+    prevAngle = phases[valid_mask][0]  # Start from first valid point
     for i in range(1, len(phases)):
         currAngle = phases[i]
         if np.isnan(currAngle):
             continue
 
-        if currAngle - prevAngle > 180.0:
+        if currAngle - prevAngle > threshold:
             currAngle -= 360.0
-        if currAngle - prevAngle < -180.0:
+        if currAngle - prevAngle < -threshold:
             currAngle += 360.0
 
         prevAngle = currAngle
@@ -788,6 +810,11 @@ def calPhaseSmoothness(
             if debug:
                 if debugTargetObs is None:
                     if j in debugTargetAnt:
+                        plt.plot(x, xxOld, "b.", label="XX old")
+                        plt.plot(x, yyOld, "r.", label="YY old")
+                        plt.title("Old solutions")
+                        plt.show()
+
                         plt.plot(x, xx, "b.", label="XX")
                         plt.plot(x, yy, "r.", label="YY")
                         plt.title(
@@ -796,6 +823,11 @@ def calPhaseSmoothness(
                         plt.show()
                 elif obs in debugTargetObs:
                     if debugTargetAnt is None:
+                        plt.plot(x, xxOld, "b.", label="XX old")
+                        plt.plot(x, yyOld, "r.", label="YY old")
+                        plt.title("Old solutions")
+                        plt.show()
+
                         plt.plot(x, xx, "b.", label="XX")
                         plt.plot(x, yy, "r.", label="YY")
                         plt.title(
@@ -803,6 +835,11 @@ def calPhaseSmoothness(
                         )
                         plt.show()
                     elif j in debugTargetAnt:
+                        plt.plot(x, xxOld, "b.", label="XX old")
+                        plt.plot(x, yyOld, "r.", label="YY old")
+                        plt.title("Old solutions")
+                        plt.show()
+
                         plt.plot(x, xx, "b.", label="XX")
                         plt.plot(x, yy, "r.", label="YY")
                         plt.title(
