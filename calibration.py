@@ -226,7 +226,7 @@ def movePhases(phases, threshold=180.0, window_size=5):
 
         # Check if current point is an outlier
         diff = phases[i] - prev_median
-        if abs(diff) > threshold:
+        if abs(diff) > 50:
             # Mark outlier with NaN so it doesn't affect subsequent unwrapping
             phases[i] = np.nan
 
