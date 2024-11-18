@@ -734,7 +734,7 @@ def calPhaseSmoothness(
         obsYYNormalised = []
 
         # Loop through antennas
-        for j in range(0, len(cal.phases[0, :, 0, 0])):
+        for j in range(0, len(xxAllPhasePerObsList[i])):
             # 'old' for debugging purposes
 
             xxOld = xxAllPhasePerObsList[i][j].copy()
