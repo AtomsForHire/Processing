@@ -379,10 +379,6 @@ def movePhases(phases):
         modified phases
     """
 
-<<<<<<< Updated upstream
-    # BUG: NEED TO DEAL WITH FLAGGED FREQUENCY CHANNELS
-    prevAngle = phases[0]
-=======
     phases = phases.copy()  # Work on a copy to preserve original
 
     # Find first valid point to start from
@@ -406,7 +402,7 @@ def movePhases(phases):
             phases[i] = np.nan
 
     prevAngle = phases[valid_mask][0]  # Start from first valid point
->>>>>>> Stashed changes
+
     for i in range(1, len(phases)):
         currAngle = phases[i]
         if np.isnan(currAngle):
