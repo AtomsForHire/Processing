@@ -379,8 +379,34 @@ def movePhases(phases):
         modified phases
     """
 
+<<<<<<< Updated upstream
     # BUG: NEED TO DEAL WITH FLAGGED FREQUENCY CHANNELS
     prevAngle = phases[0]
+=======
+    phases = phases.copy()  # Work on a copy to preserve original
+
+    # Find first valid point to start from
+    valid_mask = ~np.isnan(phases)
+    if not np.any(valid_mask):
+        return phases  # All NaN case
+
+    # First pass: identify and handle outliers
+    for i in range(window_size, len(phases)):
+        if np.isnan(phases[i]):
+            continue
+
+        # Get median of previous valid points within window
+        prev_window = phases[max(0, i - window_size) : i]
+        prev_median = np.nanmedian(prev_window)
+
+        # Check if current point is an outlier
+        diff = phases[i] - prev_median
+        if abs(diff) > 50:
+            # Mark outlier with NaN so it doesn't affect subsequent unwrapping
+            phases[i] = np.nan
+
+    prevAngle = phases[valid_mask][0]  # Start from first valid point
+>>>>>>> Stashed changes
     for i in range(1, len(phases)):
         currAngle = phases[i]
         if np.isnan(currAngle):
@@ -617,9 +643,47 @@ def calAmpSmoothness(
     -------
     """
 
+<<<<<<< Updated upstream
     ant = np.linspace(0, 127, 128)
     # interps = ['zero', 'linear', 'cspline']
     interps = ["zero", "linear"]
+=======
+    # These two are lists of lists
+    xxAllCalPerObsList = []
+    yyAllCalPerObsList = []
+
+    ###########################################################################
+    max_num_tiles = 0
+    xxMeanOrMedianSolutionPerObs = []
+    yyMeanOrMedianSolutionPerObs = []
+    nFreqPerObs = []
+    for i in range(0, len(obsids)):
+        obs = obsids[i]
+        filename = solDir + "/" + obs + "_solutions.fits"
+
+        # These are a list of the calibration solutions for each antenna
+        xxObsCals = []
+        yyObsCals = []
+        cal = read_calfits.CalFits(filename, norm=False)
+        nFreqPerObs.append(cal.Nchan)
+
+        if len(cal.gain_array[0, :, 0, 0]) > max_num_tiles:
+            max_num_tiles = len(cal.gain_array[0, :, 0, 0])
+
+        # Loop through antennas
+        for j in range(0, len(cal.gain_array[0, :, 0, 0])):
+            xxObsCals.append(np.abs(cal.gain_array[0, j, :, 0].copy()))
+            yyObsCals.append(np.abs(cal.gain_array[0, j, :, 3].copy()))
+
+        xxMeanOrMedianSolutionPerObs.append(np.nanmedian(xxObsCals, axis=0))
+        yyMeanOrMedianSolutionPerObs.append(np.nanmedian(yyObsCals, axis=0))
+        xxAllCalPerObsList.append(xxObsCals)
+        yyAllCalPerObsList.append(yyObsCals)
+
+    ###########################################################################
+
+    eps = 10 ** (-10)
+>>>>>>> Stashed changes
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
     allXXAvgSmooth = list()
@@ -712,10 +776,37 @@ def calAmpSmoothness(
     else:
         name = ""
 
+<<<<<<< Updated upstream
     # Save figure for all obsids XX
     plotSmoothnessAllObs(
         obsids,
         ant,
+=======
+        # If the observation has less than the maximum number of tiles
+        # pad with NaNs at the end of array.
+        if len(obsXXNormalised) < max_num_tiles:
+            diff = max_num_tiles - len(obsXXNormalised)
+            obsXXNormalised.extend([np.full(3072, np.nan)] * diff)
+            obsYYNormalised.extend([np.full(3072, np.nan)] * diff)
+            xxSmoothness.extend([np.nan] * diff)
+            yySmoothness.extend([np.nan] * diff)
+
+        allObsXXNormalised.append(obsXXNormalised)
+        allObsYYNormalised.append(obsYYNormalised)
+        allObsXXSmoothness.append(xxSmoothness)
+        allObsYYSmoothness.append(yySmoothness)
+        allXXAvgSmooth.append(np.nanmean(xxSmoothness))
+        allYYAvgSmooth.append(np.nanmean(yySmoothness))
+
+    saveNormalised(
+        np.array(allObsXXNormalised),
+        np.array(allObsYYNormalised),
+        np.array(obsids, dtype="S"),
+        "amplitude",
+    )
+
+    return (
+>>>>>>> Stashed changes
         allObsXXSmoothness,
         smoothDir,
         distribution,
@@ -778,10 +869,43 @@ def calPhaseSmoothness(
     -------
     """
 
+<<<<<<< Updated upstream
     ant = np.linspace(0, 127, 128)
     interps = ["zero", "linear"]
     allObsXXSmoothness = list()
     allObsYYSmoothness = list()
+=======
+    ###########################################################################
+    max_num_tiles = 0
+    xxAllPhasePerObsList = []
+    yyAllPhasePerObsList = []
+
+    nFreqPerObs = []
+    nAntPerObs = []
+    # Loop obsid and read in fits file
+    for i in range(0, len(obsids)):
+        obs = obsids[i]
+        filename = solDir + "/" + obs + "_solutions.fits"
+
+        # These are a list of the calibration solutions for each antenna in one obs
+        xxObsCals = []
+        yyObsCals = []
+        cal = read_calfits.CalFits(filename, norm=False)
+        nFreqPerObs.append(cal.Nchan)
+
+        nAntPerObs.append(len(cal.phases[0, :, 0, 0]))
+
+        if len(cal.gain_array[0, :, 0, 0]) > max_num_tiles:
+            max_num_tiles = len(cal.gain_array[0, :, 0, 0])
+
+        for j in range(0, len(cal.gain_array[0, :, 0, 0])):
+            xxObsCals.append(cal.phases[0, j, :, 0].copy())
+            yyObsCals.append(cal.phases[0, j, :, 3].copy())
+
+        xxAllPhasePerObsList.append(xxObsCals)
+        yyAllPhasePerObsList.append(yyObsCals)
+
+>>>>>>> Stashed changes
     allObsXXRMSE = list()
     allObsYYRMSE = list()
     allObsXXMAD = list()
@@ -807,10 +931,16 @@ def calPhaseSmoothness(
         xxSmoothnessAllInterps = list()
         yySmoothnessAllInterps = list()
 
+<<<<<<< Updated upstream
         if useWindow is True:
             window = signal.windows.blackmanharris(nFreq)
         else:
             window = np.ones(nFreq)
+=======
+        # Loop through antennas
+        for j in range(0, len(xxAllPhasePerObsList[i])):
+            # 'old' for debugging purposes
+>>>>>>> Stashed changes
 
         # Loop through interpolation types
         for interp_type in interps:
@@ -960,6 +1090,7 @@ def calPhaseSmoothness(
             ant, xxSmoothnessAllInterps, yySmoothnessAllInterps, obs, interps, smoothDir
         )
 
+<<<<<<< Updated upstream
     # Save figure for all obsids XX
     plotSmoothnessAllObs(
         obsids,
@@ -971,6 +1102,37 @@ def calPhaseSmoothness(
         gridDict,
         uniqueDict,
     )
+=======
+        if len(obsXXNormalised) < max_num_tiles:
+            diff = max_num_tiles - len(obsXXNormalised)
+            obsXXNormalised.extend([np.full(3072, np.nan)] * diff)
+            obsYYNormalised.extend([np.full(3072, np.nan)] * diff)
+            xxRMSE.extend([np.nan] * diff)
+            yyRMSE.extend([np.nan] * diff)
+            xxMAD.extend([np.nan] * diff)
+            yyMAD.extend([np.nan] * diff)
+            xxQuad.extend([np.nan] * diff)
+            yyQuad.extend([np.nan] * diff)
+            euclidSame.extend([np.nan] * diff)
+            pVal.extend([np.nan] * diff)
+            ksTest.extend([np.nan] * diff)
+            andersonTest.extend([np.nan] * diff)
+
+        allObsXXRMSE.append(xxRMSE)
+        allObsYYRMSE.append(yyRMSE)
+        allObsXXMAD.append(xxMAD)
+        allObsYYMAD.append(yyMAD)
+        allObsXXCubic.append(xxCubic)
+        allObsYYCubic.append(yyCubic)
+        allObsXXQuad.append(xxQuad)
+        allObsYYQuad.append(yyQuad)
+        allObsEuclidSame.append(euclidSame)
+        allObsPval.append(pVal)
+        allObsKsTest.append(ksTest)
+        allObsAndersonTest.append(andersonTest)
+        allObsXXNormalised.append(obsXXNormalised)
+        allObsYYNormalised.append(obsYYNormalised)
+>>>>>>> Stashed changes
 
     plotSmoothnessAllObs(
         obsids,
