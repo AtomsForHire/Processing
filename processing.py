@@ -3,14 +3,14 @@ import os
 import sys
 from pathlib import Path
 
+import calibration
+import correlation
+import h5py
+import image
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from astropy.io import fits
-
-import calibration
-import correlation
-import image
 
 
 class bcolors:
@@ -153,14 +153,14 @@ def getObsVec(directory, distribution):
 
     Parameters
     ----------
-    directory: string
+    - directory: `string`
         Directory of solutions/metafits files
-    distribution: string
+    - distribution: `string`
         How the obsids should be ordered, at the moment only sorted works
 
     Returns
     -------
-    result: list
+    - result: `list`
         List of observation ids
 
     -------
@@ -198,14 +198,14 @@ def getGridNum(obsids, solDir):
 
     Parameters
     ----------
-    obsids: list
+    - obsids: `list`
         List of observation ids
-    solDir: string
+    - solDir: `string`
         Path to directory containing metafits files
 
     Returns
     -------
-    gridDict: dictionary
+    - gridDict: `dictionary`
         Dictionary where keys are obsids and values are their grid number
 
     -------
@@ -217,6 +217,57 @@ def getGridNum(obsids, solDir):
             gridDict[obs] = hdr["GRIDNUM"]
 
     return gridDict
+
+
+def saveText(gridDict, stats, obsids, name):
+    with open("text/" + name + ".txt", "w") as f:
+        for i in range(0, len(obsids)):
+            obs = obsids[i]
+            stat = stats[i]
+            gridNum = gridDict[obs]
+            f.write(f"{obs} {gridNum} {stat}\n")
+
+
+def saveHDF5(
+    gridNums,
+    obsids,
+    rms,
+    dr,
+    xxGainSmoothness,
+    yyGainSmoothness,
+    xxPhaseRMSE,
+    yyPhaseRMSE,
+    xxPhaseMAD,
+    yyPhaseMAD,
+    phaseEuclidSame,
+    phaseKs,
+    phaseAnderson,
+):
+    with h5py.File("output.h5", "w") as f:
+        # save obsids
+        f.create_dataset("obsids", data=obsids)
+
+        f.create_dataset("grid_nums", data=gridNums)
+
+        # save image stats
+        img = f.create_group("image_group")
+        img.create_dataset("rms", data=rms)
+        img.create_dataset("dr", data=dr)
+
+        # Save gain stats
+        gain = f.create_group("gain_group")
+        gain.create_dataset("xxGainSmoothness", data=xxGainSmoothness)
+        gain.create_dataset("yyGainSmoothness", data=yyGainSmoothness)
+
+        # Save phase stats
+        phase = f.create_group("phase_group")
+        phase.create_dataset("xxPhaseRMSE", data=xxPhaseRMSE)
+        phase.create_dataset("yyPhaseRMSE", data=yyPhaseRMSE)
+        phase.create_dataset("xxPhaseMAD", data=xxPhaseMAD)
+        phase.create_dataset("yyPhaseMAD", data=yyPhaseMAD)
+        phase.create_dataset("phaseEuclidSame", data=phaseEuclidSame)
+        phase.create_dataset("phaseKs", data=phaseKs)
+        phase.create_dataset("phaseAnderson", data=phaseAnderson)
 
 
 def main():
@@ -249,6 +300,7 @@ def main():
     Path(smoothDirPhase).mkdir(parents=True, exist_ok=True)
     Path(phaseStatsDir).mkdir(parents=True, exist_ok=True)
     Path(corrDir).mkdir(parents=True, exist_ok=True)
+    Path("text").mkdir(parents=True, exist_ok=True)
 
     # Group obsid
     obsids = getObsVec(solDir, distribution)
@@ -270,21 +322,28 @@ def main():
         f"{bcolors.OKBLUE}TOTAL NUMBER OF OBSERVATIONS BEING PROCESSED{bcolors.ENDC}: ",
         len(obsids),
     )
+
     print(f"{bcolors.OKBLUE}OBSERVATIONS AND THEIR GRIDNUM{bcolors.ENDC}: {gridDict}")
+
     print(
         f"{bcolors.OKBLUE}UNIQUE GRIDNUMS AND FREQUENCY {bcolors.ENDC}: {len(uniqueDict)} {uniqueDict}"
     )
 
     # Get RMS for obs
     rms = image.getRMSVec(statsDir, obsids, distribution, gridDict, uniqueDict, imgDir)
+    saveText(gridDict, rms, obsids, "rms")
 
     # Get max for obs
     max = image.getMaxVec(statsDir, obsids, distribution, gridDict, uniqueDict, imgDir)
 
     # Get DR for obs
     dr = image.getDRVec(statsDir, obsids, distribution, gridDict, uniqueDict, imgDir)
+    saveText(gridDict, dr, obsids, "dr")
+    gridNums = list()
+    for i in range(0, len(obsids)):
+        gridNums.append(gridDict[obsids[i]])
 
-    # Attemp Ridhima's QA pipeline
+    # Ridhima's QA pipeline
     # print("Calibration variance")
     # calibration.calVar(obsids, varDir, solDir)
     #
@@ -292,42 +351,72 @@ def main():
     # calibration.calRMS(obsids, rmsDir, solDir)
 
     print("AMP SMOOTHNESS")
-    xxGainSmoothness, yyGainSmoothness, xxAvgSmoothness, yyAvgSmoothness = (
-        calibration.calAmpSmoothness(
-            obsids,
-            solDir,
-            smoothDirAmps,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
-            window,
-        )
+    (
+        xxGainSmoothness,
+        yyGainSmoothness,
+        xxAvgSmoothness,
+        yyAvgSmoothness,
+        allObsXXNormalised,
+        allObsYYNormalised,
+    ) = calibration.calAmpSmoothness(
+        obsids,
+        solDir,
+        smoothDirAmps,
+        distribution,
+        gridDict,
+        uniqueDict,
+        debug,
+        debugObsList,
+        debugAntList,
+        norm,
+        window,
     )
 
     print("PHASE SMOOTHNESS")
-    xxPhaseRMSE, yyPhaseRMSE, xxPhaseMAD, yyPhaseMAD, phaseEuclidSame, phaseKs = (
-        calibration.calPhaseSmoothness(
-            obsids,
-            solDir,
-            smoothDirPhase,
-            phaseStatsDir,
-            distribution,
-            gridDict,
-            uniqueDict,
-            debug,
-            debugObsList,
-            debugAntList,
-            norm,
-            useWindow=True,
-        )
+    (
+        xxPhaseRMSE,
+        yyPhaseRMSE,
+        xxPhaseMAD,
+        yyPhaseMAD,
+        phaseEuclidSame,
+        phaseKs,
+        phaseAnderson,
+    ) = calibration.calPhaseSmoothness(
+        obsids,
+        solDir,
+        smoothDirPhase,
+        phaseStatsDir,
+        distribution,
+        gridDict,
+        uniqueDict,
+        debug,
+        debugObsList,
+        debugAntList,
+        norm,
+        useWindow=False,
     )
+
+    saveHDF5(
+        gridNums,
+        obsids,
+        rms,
+        dr,
+        xxGainSmoothness,
+        yyGainSmoothness,
+        xxPhaseRMSE,
+        yyPhaseRMSE,
+        xxPhaseMAD,
+        yyPhaseMAD,
+        phaseEuclidSame,
+        phaseKs,
+        phaseAnderson,
+    )
+
+    exit()
 
     print("CORRELATION")
     print("XX RMSE VS XX SMOOTH")
+    print(len(xxPhaseRMSE), len(xxGainSmoothness))
     correlation.crossCorrAcrossAnt(
         xxGainSmoothness,
         xxPhaseRMSE,

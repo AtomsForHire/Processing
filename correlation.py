@@ -119,7 +119,9 @@ def crossCorrAcrossAnt(
     None
     """
 
-    assert len(x) == len(y), "Length of input arrays not same for crossCor"
+    assert len(x) == len(
+        y
+    ), f"Length of input arrays not same for crossCor {nameExtension}"
 
     cmap = plt.cm.plasma
     cmaplist = [cmap(i) for i in range(cmap.N)]
