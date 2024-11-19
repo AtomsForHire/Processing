@@ -231,6 +231,7 @@ def movePhases(phases, threshold=180.0, window_size=5):
             phases[i] = np.nan
 
     prevAngle = phases[valid_mask][0]  # Start from first valid point
+
     for i in range(1, len(phases)):
         currAngle = phases[i]
         if np.isnan(currAngle):
@@ -501,12 +502,12 @@ def calAmpSmoothness(
 
     -------
     """
-
     # These two are lists of lists
     xxAllCalPerObsList = []
     yyAllCalPerObsList = []
 
     ###########################################################################
+    max_num_tiles = 0
     xxMeanOrMedianSolutionPerObs = []
     yyMeanOrMedianSolutionPerObs = []
     nFreqPerObs = []
@@ -520,6 +521,10 @@ def calAmpSmoothness(
         cal = read_calfits.CalFits(filename, norm=False)
         nFreqPerObs.append(cal.Nchan)
 
+        if len(cal.gain_array[0, :, 0, 0]) > max_num_tiles:
+            max_num_tiles = len(cal.gain_array[0, :, 0, 0])
+
+        # Loop through antennas
         for j in range(0, len(cal.gain_array[0, :, 0, 0])):
             xxObsCals.append(np.abs(cal.gain_array[0, j, :, 0].copy()))
             yyObsCals.append(np.abs(cal.gain_array[0, j, :, 3].copy()))
@@ -612,6 +617,15 @@ def calAmpSmoothness(
             )
             yySmoothness.append(smooth1)
 
+        # If the observation has less than the maximum number of tiles
+        # pad with NaNs at the end of array.
+        if len(obsXXNormalised) < max_num_tiles:
+            diff = max_num_tiles - len(obsXXNormalised)
+            obsXXNormalised.extend([np.full(3072, np.nan)] * diff)
+            obsYYNormalised.extend([np.full(3072, np.nan)] * diff)
+            xxSmoothness.extend([np.nan] * diff)
+            yySmoothness.extend([np.nan] * diff)
+
         allObsXXNormalised.append(obsXXNormalised)
         allObsYYNormalised.append(obsYYNormalised)
         allObsXXSmoothness.append(xxSmoothness)
@@ -675,6 +689,7 @@ def calPhaseSmoothness(
     """
 
     ###########################################################################
+    max_num_tiles = 0
     xxAllPhasePerObsList = []
     yyAllPhasePerObsList = []
 
@@ -689,6 +704,9 @@ def calPhaseSmoothness(
         yyObsCals = []
         cal = read_calfits.CalFits(filename, norm=False)
         nFreqPerObs.append(cal.Nchan)
+
+        if len(cal.gain_array[0, :, 0, 0]) > max_num_tiles:
+            max_num_tiles = len(cal.gain_array[0, :, 0, 0])
 
         for j in range(0, len(cal.gain_array[0, :, 0, 0])):
             xxObsCals.append(cal.phases[0, j, :, 0].copy())
@@ -846,6 +864,21 @@ def calPhaseSmoothness(
                             f"{obs} antenna {j} KS {tmp[0]} Anderson {tmp2.statistic}"
                         )
                         plt.show()
+
+        if len(obsXXNormalised) < max_num_tiles:
+            diff = max_num_tiles - len(obsXXNormalised)
+            obsXXNormalised.extend([np.full(3072, np.nan)] * diff)
+            obsYYNormalised.extend([np.full(3072, np.nan)] * diff)
+            xxRMSE.extend([np.nan] * diff)
+            yyRMSE.extend([np.nan] * diff)
+            xxMAD.extend([np.nan] * diff)
+            yyMAD.extend([np.nan] * diff)
+            xxQuad.extend([np.nan] * diff)
+            yyQuad.extend([np.nan] * diff)
+            euclidSame.extend([np.nan] * diff)
+            pVal.extend([np.nan] * diff)
+            ksTest.extend([np.nan] * diff)
+            andersonTest.extend([np.nan] * diff)
 
         allObsXXRMSE.append(xxRMSE)
         allObsYYRMSE.append(yyRMSE)
